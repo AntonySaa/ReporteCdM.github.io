@@ -512,9 +512,11 @@
     }
 
     @media print{
+      *{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       body{ background:#fff; color:#000; }
       .ribbon{ display:none; }
-      .container{ padding:0 5mm; }
+      .container{ padding:0 5mm; max-width:none; }
+      .actions, .mail-modal{ display:none !important; }
       .section{ page-break-inside:avoid; }
       tbody td{ color:#000; background:#fff; }
       .note{ color:#000; background:#efefef; }
@@ -894,7 +896,7 @@
 
   <div id="mail-modal" class="mail-modal" aria-hidden="true">
     <div class="mail-modal-card" role="dialog" aria-modal="true" aria-labelledby="mail-modal-title">
-      <h3 id="mail-modal-title" class="mail-modal-title">Destinatarios de correo</h3>
+      <h3 id="mail-modal-title" class="mail-modal-title">Enviar reporte (PDF)</h3>
       <div class="mail-field">
         <label class="mail-label" for="mail-para">Para</label>
         <input id="mail-para" class="mail-input" type="text" placeholder="correo1@dominio.com, correo2@dominio.com" />
@@ -903,10 +905,10 @@
         <label class="mail-label" for="mail-cc">CC</label>
         <input id="mail-cc" class="mail-input" type="text" placeholder="correo3@dominio.com, correo4@dominio.com" />
       </div>
-      <p class="mail-help">Separa múltiples correos con coma.</p>
+      <p class="mail-help">Separa múltiples correos con coma. Luego se abrirá Imprimir para guardar en PDF con el diseño exacto.</p>
       <div class="mail-actions">
         <button type="button" id="btn-cerrar-enviar" class="btn-secondary">Cancelar</button>
-        <button type="button" id="btn-confirmar-enviar" class="btn-primary">Aceptar</button>
+        <button type="button" id="btn-confirmar-enviar" class="btn-primary">Generar PDF</button>
       </div>
     </div>
   </div>

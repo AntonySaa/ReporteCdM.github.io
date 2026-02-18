@@ -969,23 +969,20 @@ function buildReportBody() {
 }
 
 async function openMailClientFromModal() {
-  const toList = splitEmails(mailPara ? mailPara.value : "");
-  const ccList = splitEmails(mailCc ? mailCc.value : "");
-  if (toList.length === 0) {
-    alert("Ingresa al menos un correo en 'Para'.");
-    if (mailPara) mailPara.focus();
-    return;
-  }
-
   const subject =
     "[Reporte de Gestión de Incidente - Monitoring]" +
     "[" + getCurrentTurnoLabel() + "]" +
     "[" + getCurrentShiftPhrase() + "]" +
     "[" + formatDate(new Date()) + "]";
-  const htmlBody = await buildEmailHtmlSnapshot();
-  downloadEml(toList, ccList, subject, htmlBody);
+
   closeMailModal();
-  alert("Se descargó el correo con diseño completo (.eml).");
+
+  const previousTitle = document.title;
+  document.title = subject;
+  window.print();
+  setTimeout(function () {
+    document.title = previousTitle;
+  }, 1000);
 }
 
 if (btnAbrirEnviar) {
