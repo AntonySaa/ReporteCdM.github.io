@@ -968,21 +968,127 @@ function buildReportBody() {
   return lines.join("\n");
 }
 
+function sanitizeFilename(text) {
+  return String(text || "reporte")
+    .replace(/[\\/:*?"<>|]+/g, "_")
+    .replace(/\s+/g, "_")
+    .slice(0, 120);
+}
+
+function cssTextFromComputedStyle(style) {
+  const props = [
+    "display", "position", "top", "right", "bottom", "left",
+    "width", "min-width", "max-width", "height", "min-height", "max-height",
+    "box-sizing", "margin", "margin-top", "margin-right", "margin-bottom", "margin-left",
+    "padding", "padding-top", "padding-right", "padding-bottom", "padding-left",
+    "border", "border-top", "border-right", "border-bottom", "border-left",
+    "border-collapse", "border-spacing", "border-radius",
+    "background", "background-color", "color",
+    "font", "font-family", "font-size", "font-style", "font-weight", "line-height",
+    "letter-spacing", "text-align", "text-transform", "text-decoration", "white-space",
+    "vertical-align", "overflow", "opacity"
+  ];
+
+  const chunks = [];
+  props.forEach(function (prop) {
+    const value = style.getPropertyValue(prop);
+    if (value) chunks.push(prop + ":" + value);
+  });
+  return chunks.join(";");
+}
+
+function inlineComputedStyles(root) {
+  if (!root) return;
+  const all = [root].concat(Array.from(root.querySelectorAll("*")));
+  all.forEach(function (el) {
+    if (!(el instanceof Element)) return;
+    if (el.tagName === "SCRIPT") return;
+    const computed = window.getComputedStyle(el);
+    const inlineCss = cssTextFromComputedStyle(computed);
+    const existing = el.getAttribute("style");
+    el.setAttribute("style", (existing ? existing + ";" : "") + inlineCss);
+  });
+}
+
+async function buildOutlookInlineHtmlSnapshot() {
+  const container = document.querySelector(".container");
+  if (!container) return "<p>Sin contenido.</p>";
+
+  const clone = container.cloneNode(true);
+
+  const actions = clone.querySelector(".actions");
+  if (actions) actions.remove();
+
+  clone.querySelectorAll("select, input.hora-input").forEach(function (control) {
+    replaceControlWithText(control);
+  });
+
+  await inlineImagesAsDataUri(clone);
+
+  const inlineStyleTag = document.querySelector("style");
+  const inlineStyles = inlineStyleTag ? inlineStyleTag.textContent : "";
+
+  return (
+    "<!DOCTYPE html>" +
+    "<html><head><meta charset='UTF-8'>" +
+    "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
+    "<style>" + inlineStyles + "</style>" +
+    "</head>" +
+    "<body style='margin:0;padding:0;background:#ffffff;color:#000000;'>" +
+    clone.outerHTML +
+    "</body></html>"
+  );
+}
+
+
+function downloadHtmlFile(subject, htmlBody) {
+  const blob = new Blob([htmlBody], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = sanitizeFilename(subject) + ".html";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function copyHtmlToClipboard(htmlBody) {
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      const item = new ClipboardItem({
+        "text/html": new Blob([htmlBody], { type: "text/html" }),
+        "text/plain": new Blob(["Reporte de incidentes listo para pegar en Outlook."], { type: "text/plain" })
+      });
+      await navigator.clipboard.write([item]);
+      return true;
+    }
+  } catch (error) {
+    console.warn("No se pudo copiar HTML al portapapeles:", error);
+  }
+  return false;
+}
+
 async function openMailClientFromModal() {
+  const toList = splitEmails(mailPara ? mailPara.value : "");
+  const ccList = splitEmails(mailCc ? mailCc.value : "");
+
   const subject =
     "[Reporte de Gestión de Incidente - Monitoring]" +
     "[" + getCurrentTurnoLabel() + "]" +
     "[" + getCurrentShiftPhrase() + "]" +
     "[" + formatDate(new Date()) + "]";
 
-  closeMailModal();
+  const htmlBody = await buildOutlookInlineHtmlSnapshot();
+  downloadHtmlFile(subject, htmlBody);
+  const copied = await copyHtmlToClipboard(htmlBody);
 
-  const previousTitle = document.title;
-  document.title = subject;
-  window.print();
-  setTimeout(function () {
-    document.title = previousTitle;
-  }, 1000);
+  closeMailModal();
+  alert(
+    copied
+      ? "Se descargó el HTML para Outlook y se copió al portapapeles. En Outlook: Nuevo correo > pegar (Cmd+V)."
+      : "Se descargó el HTML para Outlook. Ábrelo y copia/pega el contenido en el cuerpo del correo."
+  );
 }
 
 if (btnAbrirEnviar) {
