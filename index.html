@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reporte de Gestión de Incidentes - Squad Monitoring</title>
+  <style>
+    :root{
+      --rojo:#c4221a;
+      --verde:#138a12;
+      --morado:#b57edc;
+      --negro:#ffffff;
+      --blanco:#000000;
+      --borde:#bfbfbf;
+      --gris:#dedede;
+      --texto:#000000;
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{
+      margin:0;
+      padding:0;
+      font-family: Arial, Helvetica, sans-serif;
+      color:var(--texto);
+      background:var(--negro);
+    }
+
+    .container{
+      max-width:1080px;
+      margin:0 auto;
+      padding:10px 14px 24px;
+    }
+
+    .ribbon{
+      display:none;
+    }
+    .tag{
+      border:1px solid var(--borde);
+      color:var(--blanco);
+      background:transparent;
+      text-transform:uppercase;
+      font-weight:700;
+      letter-spacing:.4px;
+      font-size:12px;
+      padding:6px 10px;
+      white-space:nowrap;
+    }
+    .tag.info{ color:#000; }
+    .tag.ok{ color:#000; }
+    .shift-btn{
+      cursor:pointer;
+      font:inherit;
+    }
+    .shift-btn.active{
+      background:var(--rojo);
+      border-color:var(--rojo);
+    }
+
+    .title{
+      text-align:center;
+      margin:6px 0 8px;
+      font-size:clamp(20px, 1.7vw, 34px);
+      font-weight:800;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+      color:var(--blanco);
+    }
+    .subtitle{
+      text-align:center;
+      margin:0 0 12px;
+      font-size:12px;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      color:#cfcfcf;
+    }
+
+    .meta{
+      border:1px solid var(--borde);
+      margin:12px 0 12px;
+      width:100%;
+      display:grid;
+      grid-template-columns: 2fr 1fr 1.2fr;
+      background:#fff;
+    }
+    .meta-col{
+      border-right:1px solid var(--borde);
+      padding:8px 10px;
+      min-height:88px;
+    }
+    .meta-col:last-child{ border-right:none; }
+    .meta-line{
+      margin:0 0 6px;
+      font-size:13px;
+      color:var(--blanco);
+      text-transform:uppercase;
+    }
+    .meta-label{
+      margin:0 0 6px;
+      font-size:12px;
+      font-weight:700;
+      color:var(--blanco);
+      text-transform:uppercase;
+    }
+    .meta-value{
+      margin:0 0 6px;
+      font-size:12px;
+      color:var(--blanco);
+      text-transform:uppercase;
+    }
+
+    .cards{
+      margin:8px 0 14px;
+      border:1px solid var(--borde);
+      background:#fff;
+      max-width:540px;
+    }
+    .card{
+      border-top:1px solid var(--borde);
+    }
+    .card:first-child{ border-top:none; }
+    .card h4{
+      margin:0;
+      padding:6px 10px;
+      font-size:14px;
+      color:var(--blanco);
+      background:var(--rojo);
+      text-transform:uppercase;
+      letter-spacing:.3px;
+    }
+    .counter-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+    }
+    .pill{
+      display:block;
+      text-align:center;
+      font-weight:700;
+      color:var(--blanco);
+      font-size:12px;
+      text-transform:uppercase;
+      border-top:1px solid var(--borde);
+      border-right:1px solid var(--borde);
+      background:var(--rojo);
+      padding:6px;
+    }
+    .counter-row .pill:last-child{ border-right:none; }
+    .counter-row.values .pill{
+      background:#fff;
+      font-size:12px;
+      font-weight:600;
+    }
+
+    .section{
+      margin:14px 0 12px;
+      border:1px solid var(--borde);
+      overflow:hidden;
+    }
+    .section .header{
+      color:var(--blanco);
+      background:var(--rojo);
+      padding:7px 12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .section .header small{
+      font-weight:700;
+      opacity:.95;
+      font-size:12px;
+    }
+    .section.verde .header{
+      background:var(--verde);
+    }
+    .section.verde thead th{
+      background:var(--verde);
+    }
+    .section.verde .badge,
+    .section.verde .badge.fin,
+    .section.verde .badge.n1,
+    .section.verde .badge.n2,
+    .section.verde .badge.n3{
+      background:var(--verde);
+    }
+    .section.morado .header{
+      background:var(--morado);
+    }
+    .section.morado thead th{
+      background:var(--morado);
+    }
+    .section.morado .badge,
+    .section.morado .badge.n1,
+    .section.morado .badge.n2,
+    .section.morado .badge.n3{
+      background:var(--morado);
+    }
+
+    .top-logos{
+      display:grid;
+      grid-template-columns:1fr auto 1fr;
+      align-items:center;
+      margin-bottom:4px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      min-height:40px;
+    }
+    .brand.right{
+      justify-content:flex-end;
+    }
+    .brand-logo{
+      width:140px;
+      height:40px;
+      object-fit:contain;
+      object-position:left center;
+      display:block;
+    }
+    .brand.right .brand-logo{
+      width:180px;
+      height:52px;
+      object-position:right center;
+    }
+    .top-summary{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:14px;
+      margin:6px 0 14px;
+    }
+    .summary-left{
+      font-size:clamp(14px, 1vw, 30px);
+      line-height:1.55;
+      text-transform:uppercase;
+      color:#000;
+      padding-top:2px;
+    }
+    .summary-right .row{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:12px;
+      margin:3px 0;
+      font-size:clamp(11px, .84vw, 20px);
+      text-transform:uppercase;
+      color:#000;
+    }
+    .summary-right .label{
+      font-weight:700;
+    }
+    .engineer-select{
+      min-width:210px;
+      border:1px solid var(--borde);
+      background:#fff;
+      color:#000;
+      font:inherit;
+      text-transform:uppercase;
+      padding:2px 6px;
+      height:24px;
+    }
+    .hora-input{
+      min-width:210px;
+      border:1px solid var(--borde);
+      background:#fff;
+      color:#000;
+      font:inherit;
+      padding:2px 6px;
+      height:24px;
+    }
+
+    table{
+      border-collapse:collapse;
+      width:100%;
+      table-layout:fixed;
+      background:#fff;
+    }
+    .incident-table{
+      margin-top:10px;
+    }
+    .incident-table:first-of-type{
+      margin-top:0;
+    }
+    thead th{
+      background:var(--rojo);
+      color:var(--blanco);
+      text-align:left;
+      padding:7px 6px;
+      font-size:10px;
+      line-height:1.15;
+      border:1px solid var(--borde);
+      text-transform:uppercase;
+      letter-spacing:.3px;
+    }
+    tbody td{
+      border:1px solid var(--borde);
+      vertical-align:top;
+      padding:7px 6px;
+      font-size:12px;
+      color:var(--blanco);
+      background:#fff;
+      word-wrap:break-word;
+    }
+    tbody tr.detail-row td{
+      background:#e3e3e3;
+      color:#000;
+      font-size:11px;
+      padding:6px 8px;
+    }
+    td.detail-label{
+      font-weight:700;
+      white-space:nowrap;
+    }
+    td.detail-text{
+      font-weight:500;
+    }
+    .levels-strip{
+      border:1px solid var(--borde);
+      margin:10px 0 14px;
+      max-width:560px;
+      background:#fff;
+    }
+    .levels-strip .head{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+    }
+    .levels-strip .head span{
+      background:var(--verde);
+      color:#fff;
+      text-align:center;
+      padding:7px 6px;
+      font-size:10px;
+      font-weight:700;
+      border-right:1px solid var(--borde);
+      text-transform:uppercase;
+    }
+    .levels-strip .head span:last-child{
+      border-right:none;
+    }
+    .levels-strip .vals{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+    }
+    .levels-strip .vals span{
+      text-align:center;
+      padding:7px 6px;
+      font-size:12px;
+      border-top:1px solid var(--borde);
+      border-right:1px solid var(--borde);
+    }
+    .levels-strip .vals span:last-child{
+      border-right:none;
+    }
+    .levels-strip.morado .head span{
+      background:var(--morado);
+    }
+
+    .badge{
+      display:inline-block;
+      padding:3px 6px;
+      font-weight:700;
+      font-size:11px;
+      text-transform:uppercase;
+      border:1px solid var(--borde);
+      color:var(--blanco);
+      background:var(--rojo);
+    }
+    .badge.proc, .badge.fin, .badge.n1, .badge.n2, .badge.n3{ background:var(--rojo); color:var(--blanco); }
+
+    .note{
+      color:#111;
+      font-size:12px;
+      margin:8px -6px -8px;
+      padding:8px 6px;
+      background:var(--gris);
+      white-space:pre-line;
+    }
+
+    .footer{
+      margin-top:20px;
+      font-size:12px;
+      color:#000;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .actions{
+      margin-top:10px;
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+    }
+    .btn-enviar{
+      background:var(--verde);
+      color:#fff;
+      border:1px solid #0f6f0e;
+      font-size:12px;
+      font-weight:700;
+      padding:5px 14px;
+      cursor:pointer;
+      border-radius:3px;
+      text-transform:uppercase;
+    }
+    .btn-enviar:hover{
+      filter:brightness(0.95);
+    }
+    .btn-actualizar{
+      background:#2f6fdd;
+      color:#fff;
+      border:1px solid #2459b3;
+      font-size:12px;
+      font-weight:700;
+      padding:5px 14px;
+      cursor:pointer;
+      border-radius:3px;
+      text-transform:uppercase;
+    }
+    .btn-actualizar:hover{
+      filter:brightness(0.95);
+    }
+    .mail-modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.25);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:999;
+    }
+    .mail-modal.show{
+      display:flex;
+    }
+    .mail-modal-card{
+      width:min(420px, calc(100% - 24px));
+      background:#fff;
+      border:1px solid #bfbfbf;
+      border-radius:4px;
+      padding:12px;
+      box-shadow:0 10px 30px rgba(0,0,0,.2);
+    }
+    .mail-modal-title{
+      margin:0 0 10px;
+      font-size:14px;
+      font-weight:700;
+      text-transform:uppercase;
+    }
+    .mail-field{
+      margin-bottom:8px;
+    }
+    .mail-label{
+      display:block;
+      margin-bottom:4px;
+      font-size:11px;
+      font-weight:700;
+      text-transform:uppercase;
+    }
+    .mail-input{
+      width:100%;
+      border:1px solid #bfbfbf;
+      padding:7px 8px;
+      font-size:12px;
+      font-family:Arial, Helvetica, sans-serif;
+    }
+    .mail-help{
+      margin:0 0 10px;
+      font-size:10px;
+      color:#666;
+    }
+    .mail-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+    }
+    .btn-secondary{
+      background:#f3f3f3;
+      color:#000;
+      border:1px solid #bfbfbf;
+      padding:6px 10px;
+      font-size:12px;
+      cursor:pointer;
+    }
+    .btn-primary{
+      background:var(--verde);
+      color:#fff;
+      border:1px solid #0f6f0e;
+      padding:6px 10px;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    @media (max-width:860px){
+      .top-logos{
+        grid-template-columns:1fr;
+        gap:10px;
+      }
+      .brand.right, .brand{
+        justify-content:flex-start;
+      }
+      .brand-logo{
+        width:120px;
+        height:34px;
+      }
+      .top-summary{
+        grid-template-columns:1fr;
+      }
+      .summary-right .row{
+        grid-template-columns:1fr;
+        gap:4px;
+      }
+      .cards{ max-width:100%; }
+    }
+
+    @media print{
+      body{ background:#fff; color:#000; }
+      .ribbon{ display:none; }
+      .container{ padding:0 5mm; }
+      .section{ page-break-inside:avoid; }
+      tbody td{ color:#000; background:#fff; }
+      .note{ color:#000; background:#efefef; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-logos">
+      <div class="brand">
+        <img class="brand-logo" src="./kyndryl-logo.svg" alt="Kyndryl" />
+      </div>
+      <div class="title">REPORTE DE GESTIÓN DE INCIDENTES - SQUAD MONITORING</div>
+      <div class="brand right">
+        <img class="brand-logo" src="aa.png" alt="BCP" />
+      </div>
+    </div>
+    <div class="top-summary">
+      <div class="summary-left">
+        <div>Incidentes masivos en proceso</div>
+        <div>Incidentes masivos finalizados</div>
+      </div>
+      <div class="summary-right">
+        <div class="row"><span class="label">Hora de entrada:</span><input id="hora-inicio-full" class="hora-input" type="text" value="11/02/2026 06:00" /></div>
+        <div class="row"><span class="label">Hora de salida:</span><input id="hora-cierre-full" class="hora-input" type="text" value="11/02/2026 18:00" /></div>
+        <div class="row"><span class="label">Ingeniero saliente:</span><select id="ingeniero-saliente" class="engineer-select"></select></div>
+        <div class="row"><span class="label">Ingeniero entrante:</span><select id="ingeniero-entrante" class="engineer-select"></select></div>
+      </div>
+    </div>
+
+    <div class="ribbon" aria-hidden="true">
+      <button type="button" id="btn-manana" class="tag shift-btn active">Turno Mañana</button>
+      <button type="button" id="btn-noche" class="tag shift-btn">Turno Noche</button>
+      <span class="tag" id="shift-range">Desde 06:00 hasta 18:00</span>
+      <span class="tag" id="current-date-tag">[11/02/2026]</span>
+    </div>
+
+    <!-- Resumen de contadores -->
+    <div class="cards">
+      <div class="card">
+        <h4>Incidentes masivos en proceso</h4>
+        <div class="counter-row">
+          <span class="pill n1">Nivel 1</span>
+          <span class="pill n2">Nivel 0</span>
+        </div>
+        <div class="counter-row values">
+          <span id="count-proceso-n1" class="pill n1">0</span>
+          <span id="count-proceso-n0" class="pill n2">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: En Proceso -->
+    <section class="section rojo">
+      <div class="header">
+        <div>Incidentes Masivos en Proceso</div>
+      </div>
+
+      <table class="incident-table tabla-proceso-incidente" aria-label="Incidentes masivos en proceso">
+        <thead>
+          <tr>
+            <th style="width:16%">Aplicación</th>
+            <th style="width:12%">Ticket</th>
+            <th style="width:12%">Fuente</th>
+            <th style="width:10%">Nivel</th>
+            <th style="width:16%">Inicio del Incidente (Fecha y Hora)</th>
+            <th style="width:16%">Situation Manager</th>
+            <th style="width:10%">Estado</th>
+            <th style="width:8%">Ultimo Correo de Gestión</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- ====== Ejemplo 1 ====== -->
+          <tr>
+            <td>CTXA-CITRIX APLICACIONES VIRTUALES</td>
+            <td>ITSM-1882101</td>
+            <td>Soporte de Aplicación (IDT)</td>
+            <td>N1</td>
+            <td>11/02/2026 15:39</td>
+            <td>Juan Antonio Senador Romero</td>
+            <td>EN PROCESO</td>
+            <td>11/02/2026 18:05</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Síntoma</td>
+            <td class="detail-text" colspan="7">No se logra ingresar a server PCTXAWINP02 via PAMM</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Estado actual</td>
+            <td class="detail-text" colspan="7">La incidencia viene siendo revisado por los soportes correspondientes.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="incident-table tabla-proceso-incidente" aria-label="Incidentes masivos en proceso">
+        <thead>
+          <tr>
+            <th style="width:16%">Aplicación</th>
+            <th style="width:12%">Ticket</th>
+            <th style="width:12%">Fuente</th>
+            <th style="width:10%">Nivel</th>
+            <th style="width:16%">Inicio del Incidente (Fecha y Hora)</th>
+            <th style="width:16%">Situation Manager</th>
+            <th style="width:10%">Estado</th>
+            <th style="width:8%">Ultimo Correo de Gestión</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>HTDR-TELECREDITO - HOST TO HOST</td>
+            <td>ITSM-18269227</td>
+            <td>Soporte de Aplicación (IDT)</td>
+            <td>N1</td>
+            <td>11/02/2026 14:12</td>
+            <td>Jose L. Narváez Junque</td>
+            <td>EN PROCESO</td>
+            <td>11/02/2026 17:21</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Síntoma</td>
+            <td class="detail-text" colspan="7">Intermitencias en procesamiento Host to Host.</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Estado actual</td>
+            <td class="detail-text" colspan="7">Revisión con soporte de componentes.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="incident-table tabla-proceso-incidente" aria-label="Incidentes masivos en proceso">
+        <thead>
+          <tr>
+            <th style="width:16%">Aplicación</th>
+            <th style="width:12%">Ticket</th>
+            <th style="width:12%">Fuente</th>
+            <th style="width:10%">Nivel</th>
+            <th style="width:16%">Inicio del Incidente (Fecha y Hora)</th>
+            <th style="width:16%">Situation Manager</th>
+            <th style="width:10%">Estado</th>
+            <th style="width:8%">Ultimo Correo de Gestión</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CPL / OPENSHIFT CONTAINER PLATFORM</td>
+            <td>ITSM-18582124</td>
+            <td>Canales y Aplicaciones (NOC/Monitoreo)</td>
+            <td>N0</td>
+            <td>11/02/2026 12:09</td>
+            <td>No requerido</td>
+            <td>EN PROCESO</td>
+            <td>11/02/2026 18:06</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Síntoma</td>
+            <td class="detail-text" colspan="7">Presentan alertas en Dynatrace por latencia en clúster (Response time degradado).</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Estado actual</td>
+            <td class="detail-text" colspan="7">Validando con squads de soporte correspondientes.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Sección: Finalizados -->
+    <section class="section verde">
+      <div class="header">
+        <div>Incidentes Masivos Finalizados</div>
+      </div>
+      <div class="levels-strip">
+        <div class="head">
+          <span>Nivel 1</span>
+          <span>Nivel 0</span>
+        </div>
+        <div class="vals">
+          <span id="count-finalizados-n1">0</span>
+          <span id="count-finalizados-n0">0</span>
+        </div>
+      </div>
+
+      <table class="incident-table tabla-finalizados-incidente" aria-label="Incidentes masivos finalizados">
+        <thead>
+          <tr>
+            <th style="width:16%">Aplicación</th>
+            <th style="width:12%">Ticket</th>
+            <th style="width:14%">Fuente</th>
+            <th style="width:8%">Nivel</th>
+            <th style="width:14%">Inicio del Incidente (Fecha y Hora)</th>
+            <th style="width:14%">Fin del Incidente (Fecha y Hora)</th>
+            <th style="width:14%">Situation Manager</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- ====== Fila 1 ====== -->
+          <tr>
+            <td>MBBK-MOBILE BANKING</td>
+            <td>ITSM-1879914</td>
+            <td>Centro de Monitoreo - Canales y Aplicaciones</td>
+            <td>N1</td>
+            <td>11/02/2026 07:30</td>
+            <td>11/02/2026 08:05</td>
+            <td>Juan Antonio Senador Romero</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Síntoma</td>
+            <td class="detail-text" colspan="6">Intermitencia al realizar pagos de tarjetas de crédito en el canal de MBBK.</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Causa</td>
+            <td class="detail-text" colspan="6">Investigación por el VPLU; se crea ticket problema.</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Solución</td>
+            <td class="detail-text" colspan="6">Se reinició el CICS de VPLU AV22.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="incident-table tabla-finalizados-incidente" aria-label="Incidentes masivos finalizados">
+        <thead>
+          <tr>
+            <th style="width:16%">Aplicación</th>
+            <th style="width:12%">Ticket</th>
+            <th style="width:14%">Fuente</th>
+            <th style="width:8%">Nivel</th>
+            <th style="width:14%">Inicio del Incidente (Fecha y Hora)</th>
+            <th style="width:14%">Fin del Incidente (Fecha y Hora)</th>
+            <th style="width:14%">Situation Manager</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>GCTP-GENESYS CLOUD TELEPHONY PLATFORM</td>
+            <td>ITSM-1880562</td>
+            <td>Soporte de Aplicación (IDT)</td>
+            <td>N0</td>
+            <td>11/02/2026 10:10</td>
+            <td>11/02/2026 10:35</td>
+            <td>Nestor Antonio Berrocal Francia</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Síntoma</td>
+            <td class="detail-text" colspan="6">Demora en las llamadas y carga de la aplicación en varios usuarios de la sede de Centro de Contacto Trujillo.</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Causa</td>
+            <td class="detail-text" colspan="6">Incidencia masiva con el operador Claro en la zona de Trujillo; se identificó un corte de fibra.</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Solución</td>
+            <td class="detail-text" colspan="6">Se utilizó el otro operador de internet activo y los usuarios continuaron operando.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="incident-table tabla-finalizados-incidente" aria-label="Incidentes masivos finalizados">
+        <thead>
+          <tr>
+            <th style="width:16%">Aplicación</th>
+            <th style="width:12%">Ticket</th>
+            <th style="width:14%">Fuente</th>
+            <th style="width:8%">Nivel</th>
+            <th style="width:14%">Inicio del Incidente (Fecha y Hora)</th>
+            <th style="width:14%">Fin del Incidente (Fecha y Hora)</th>
+            <th style="width:14%">Situation Manager</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>DPCA-DIGITALIZACIÓN PCM</td>
+            <td>ITSM-01824717</td>
+            <td>Soporte de Aplicación (IDT)</td>
+            <td>N1</td>
+            <td>11/02/2026 11:41</td>
+            <td>11/02/2026 12:10</td>
+            <td>Vidal Salcedo Barboza</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Síntoma</td>
+            <td class="detail-text" colspan="6">Indisponibilidad de motor de carga.</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Causa</td>
+            <td class="detail-text" colspan="6">Implementaciones recientes con errores de migraciones.</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Solución</td>
+            <td class="detail-text" colspan="6">Se revirtió la versión y se normalizó el servicio.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="incident-table tabla-finalizados-incidente" aria-label="Incidentes masivos finalizados">
+        <thead>
+          <tr>
+            <th style="width:16%">Aplicación</th>
+            <th style="width:12%">Ticket</th>
+            <th style="width:14%">Fuente</th>
+            <th style="width:8%">Nivel</th>
+            <th style="width:14%">Inicio del Incidente (Fecha y Hora)</th>
+            <th style="width:14%">Fin del Incidente (Fecha y Hora)</th>
+            <th style="width:14%">Situation Manager</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>YAPE</td>
+            <td>ITSM-18767922</td>
+            <td>Centro de Monitoreo - Canales y Aplicaciones</td>
+            <td>N0</td>
+            <td>11/02/2026 07:17</td>
+            <td>11/02/2026 07:25</td>
+            <td>Juan Antonio Senador Romero</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Síntoma</td>
+            <td class="detail-text" colspan="6">Alertas de Dynatrace por latencia (degradación).</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Causa</td>
+            <td class="detail-text" colspan="6">Sobrecarga temporal de umbrales de tiempo de respuesta.</td>
+          </tr>
+          <tr class="detail-row">
+            <td class="detail-label">Solución</td>
+            <td class="detail-text" colspan="6">Se superaron los umbrales y el servicio quedó operativo.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Sección: Desestimados -->
+    <section class="section morado">
+      <div class="header">
+        <div>Incidentes Desestimados</div>
+      </div>
+      <div class="levels-strip morado">
+        <div class="head">
+          <span>Nivel 1</span>
+          <span>Nivel 0</span>
+        </div>
+        <div class="vals">
+          <span id="count-desestimados-n1">0</span>
+          <span id="count-desestimados-n0">0</span>
+        </div>
+      </div>
+
+      <table class="incident-table tabla-desestimados-incidente" aria-label="Incidentes desestimados">
+        <thead>
+          <tr>
+            <th style="width:16%">Aplicación</th>
+            <th style="width:12%">Ticket</th>
+            <th style="width:14%">Fuente</th>
+            <th style="width:8%">Nivel</th>
+            <th style="width:14%">Inicio del Incidente (Fecha y Hora)</th>
+            <th style="width:14%">Fin del Incidente (Fecha y Hora)</th>
+            <th style="width:14%">Situation Manager</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="7" style="text-align:center;">Sin incidentes desestimados por el momento.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="footer">
+      <div><strong>Notas:</strong> Este documento es de uso interno. No compartir fuera de la organización.</div>
+    </div>
+    <div class="actions">
+      <button type="button" id="btn-actualizar-reporte" class="btn-actualizar">Actualizar</button>
+      <button type="button" id="btn-abrir-enviar" class="btn-enviar">Enviar</button>
+    </div>
+    <input id="excel-file-input" type="file" accept=".xlsx,.xls" style="display:none;" />
+  </div>
+
+  <div id="mail-modal" class="mail-modal" aria-hidden="true">
+    <div class="mail-modal-card" role="dialog" aria-modal="true" aria-labelledby="mail-modal-title">
+      <h3 id="mail-modal-title" class="mail-modal-title">Destinatarios de correo</h3>
+      <div class="mail-field">
+        <label class="mail-label" for="mail-para">Para</label>
+        <input id="mail-para" class="mail-input" type="text" placeholder="correo1@dominio.com, correo2@dominio.com" />
+      </div>
+      <div class="mail-field">
+        <label class="mail-label" for="mail-cc">CC</label>
+        <input id="mail-cc" class="mail-input" type="text" placeholder="correo3@dominio.com, correo4@dominio.com" />
+      </div>
+      <p class="mail-help">Separa múltiples correos con coma.</p>
+      <div class="mail-actions">
+        <button type="button" id="btn-cerrar-enviar" class="btn-secondary">Cancelar</button>
+        <button type="button" id="btn-confirmar-enviar" class="btn-primary">Aceptar</button>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="./index.js"></script>
+</body>
+</html>

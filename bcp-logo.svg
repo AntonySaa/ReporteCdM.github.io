@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="130" viewBox="0 0 420 130" role="img" aria-label="BCP">
+  <rect width="100%" height="100%" fill="transparent"/>
+
+  <!-- Left mark -->
+  <path d="M28 67C14 79 7 91 6 105C16 110 29 108 41 101C59 91 73 78 81 62C90 45 87 30 72 20C60 12 46 12 33 18C23 23 18 30 18 39C30 43 40 50 48 60C42 63 35 66 28 67Z" fill="#f5822f"/>
+  <path d="M18 39C18 30 23 23 33 18C42 14 52 14 61 18C58 26 54 33 48 40C42 36 35 33 26 33C22 34 19 36 18 39Z" fill="#0b4ea2"/>
+
+  <!-- Right mark -->
+  <g transform="translate(420,0) scale(-1,1)">
+    <path d="M28 67C14 79 7 91 6 105C16 110 29 108 41 101C59 91 73 78 81 62C90 45 87 30 72 20C60 12 46 12 33 18C23 23 18 30 18 39C30 43 40 50 48 60C42 63 35 66 28 67Z" fill="#f5822f"/>
+    <path d="M18 39C18 30 23 23 33 18C42 14 52 14 61 18C58 26 54 33 48 40C42 36 35 33 26 33C22 34 19 36 18 39Z" fill="#0b4ea2"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g fill="#0b4ea2" font-family="Arial Black, Arial, Helvetica, sans-serif" font-style="italic" font-weight="900">
+    <text x="84" y="104" font-size="98" letter-spacing="-4">BCP</text>
+  </g>
+</svg>
