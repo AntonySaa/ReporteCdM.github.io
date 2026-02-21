@@ -1025,15 +1025,12 @@ async function buildOutlookInlineHtmlSnapshot() {
   });
 
   await inlineImagesAsDataUri(clone);
-
-  const inlineStyleTag = document.querySelector("style");
-  const inlineStyles = inlineStyleTag ? inlineStyleTag.textContent : "";
+  inlineComputedStyles(clone);
 
   return (
     "<!DOCTYPE html>" +
     "<html><head><meta charset='UTF-8'>" +
     "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-    "<style>" + inlineStyles + "</style>" +
     "</head>" +
     "<body style='margin:0;padding:0;background:#ffffff;color:#000000;'>" +
     clone.outerHTML +
