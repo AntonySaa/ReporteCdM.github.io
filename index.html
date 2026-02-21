@@ -905,7 +905,7 @@
         <label class="mail-label" for="mail-cc">CC</label>
         <input id="mail-cc" class="mail-input" type="text" placeholder="correo3@dominio.com, correo4@dominio.com" />
       </div>
-      <p class="mail-help">Separa múltiples correos con coma. Se enviará en el cuerpo del correo usando Power Automate.</p>
+      <p class="mail-help">Separa múltiples correos con coma. Se enviará una imagen del reporte en el cuerpo del correo usando Power Automate.</p>
       <div class="mail-actions">
         <button type="button" id="btn-cerrar-enviar" class="btn-secondary">Cancelar</button>
         <button type="button" id="btn-confirmar-enviar" class="btn-primary">Enviar ahora</button>
@@ -913,6 +913,7 @@
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="./index.js"></script>
 </body>
 </html>

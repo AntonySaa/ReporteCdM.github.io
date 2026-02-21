@@ -1067,6 +1067,39 @@ async function copyHtmlToClipboard(htmlBody) {
   return false;
 }
 
+function waitMs(ms) {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function buildImageBodyHtmlSnapshot(subject) {
+  const container = document.querySelector(".container");
+  if (!container || !window.html2canvas) return "";
+
+  const canvas = await window.html2canvas(container, {
+    backgroundColor: "#ffffff",
+    scale: 1.5,
+    useCORS: true,
+    logging: false,
+    ignoreElements: function (element) {
+      if (!element) return false;
+      if (element.id === "mail-modal") return true;
+      if (element.classList && element.classList.contains("actions")) return true;
+      return false;
+    }
+  });
+
+  const imageDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+  return (
+    "<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body style='margin:0;padding:0;background:#ffffff;'>" +
+    "<div style='font-family:Arial,Helvetica,sans-serif;color:#111111;padding:10px 8px;'>" +
+    "<div style='font-size:14px;font-weight:700;margin-bottom:10px;'>" + sanitizeHeader(subject) + "</div>" +
+    "<img alt='Reporte de Gestión de Incidentes' src='" + imageDataUrl + "' style='display:block;width:100%;max-width:1400px;height:auto;border:1px solid #d4d4d4;' />" +
+    "</div></body></html>"
+  );
+}
+
 async function sendReportToPowerAutomate(payload) {
   const response = await fetch(POWER_AUTOMATE_WEBHOOK_URL, {
     method: "POST",
@@ -1096,7 +1129,18 @@ async function openMailClientFromModal() {
     "[" + getCurrentShiftPhrase() + "]" +
     "[" + formatDate(new Date()) + "]";
 
-  const htmlBody = await buildOutlookInlineHtmlSnapshot();
+  closeMailModal();
+  await waitMs(100);
+
+  let htmlBody = "";
+  try {
+    htmlBody = await buildImageBodyHtmlSnapshot(subject);
+  } catch (error) {
+    console.warn("No se pudo generar imagen del reporte. Se enviará HTML:", error);
+  }
+  if (!htmlBody) {
+    htmlBody = await buildOutlookInlineHtmlSnapshot();
+  }
 
   try {
     await sendReportToPowerAutomate({
@@ -1105,7 +1149,6 @@ async function openMailClientFromModal() {
       subject: subject,
       htmlBody: htmlBody
     });
-    closeMailModal();
     alert("Reporte enviado correctamente por Power Automate.");
   } catch (error) {
     console.error(error);
