@@ -59,6 +59,7 @@ const countFinalizadosN1 = document.getElementById("count-finalizados-n1");
 const countFinalizadosN0 = document.getElementById("count-finalizados-n0");
 const countDesestimadosN1 = document.getElementById("count-desestimados-n1");
 const countDesestimadosN0 = document.getElementById("count-desestimados-n0");
+const POWER_AUTOMATE_WEBHOOK_URL = "https://defaultf260df36bc43424c8f44c85226657b.01.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/082c124a8e74486bb359dba54a14e79d/triggers/manual/paths/invoke?api-version=1";
 let turnoSeleccionado = null;
 let horaInicioManual = false;
 let horaCierreManual = false;
@@ -1069,9 +1070,28 @@ async function copyHtmlToClipboard(htmlBody) {
   return false;
 }
 
+async function sendReportToPowerAutomate(payload) {
+  const response = await fetch(POWER_AUTOMATE_WEBHOOK_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error("HTTP " + response.status + " - " + body);
+  }
+}
+
 async function openMailClientFromModal() {
   const toList = splitEmails(mailPara ? mailPara.value : "");
   const ccList = splitEmails(mailCc ? mailCc.value : "");
+  if (toList.length === 0) {
+    alert("Ingresa al menos un correo en 'Para'.");
+    return;
+  }
 
   const subject =
     "[Reporte de Gestión de Incidente - Monitoring]" +
@@ -1080,15 +1100,26 @@ async function openMailClientFromModal() {
     "[" + formatDate(new Date()) + "]";
 
   const htmlBody = await buildOutlookInlineHtmlSnapshot();
-  downloadHtmlFile(subject, htmlBody);
-  const copied = await copyHtmlToClipboard(htmlBody);
 
-  closeMailModal();
-  alert(
-    copied
-      ? "Se descargó el HTML para Outlook y se copió al portapapeles. En Outlook: Nuevo correo > pegar (Cmd+V)."
-      : "Se descargó el HTML para Outlook. Ábrelo y copia/pega el contenido en el cuerpo del correo."
-  );
+  try {
+    await sendReportToPowerAutomate({
+      to: toList.join(";"),
+      cc: ccList.join(";"),
+      subject: subject,
+      htmlBody: htmlBody
+    });
+    closeMailModal();
+    alert("Reporte enviado correctamente por Power Automate.");
+  } catch (error) {
+    console.error(error);
+    downloadHtmlFile(subject, htmlBody);
+    const copied = await copyHtmlToClipboard(htmlBody);
+    alert(
+      copied
+        ? "No se pudo enviar por Power Automate. Se descargó el HTML y se copió al portapapeles como respaldo."
+        : "No se pudo enviar por Power Automate. Se descargó el HTML como respaldo."
+    );
+  }
 }
 
 if (btnAbrirEnviar) {
