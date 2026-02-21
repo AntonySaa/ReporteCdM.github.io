@@ -59,7 +59,6 @@ const countFinalizadosN1 = document.getElementById("count-finalizados-n1");
 const countFinalizadosN0 = document.getElementById("count-finalizados-n0");
 const countDesestimadosN1 = document.getElementById("count-desestimados-n1");
 const countDesestimadosN0 = document.getElementById("count-desestimados-n0");
-const POWER_AUTOMATE_WEBHOOK_URL = "https://defaultf260df36bc43424c8f44c85226657b.01.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/082c124a8e74486bb359dba54a14e79d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PtqCiuYZI154h2qgL7cozlPVEdo0FS7b9sXEpdcE5ak";
 let turnoSeleccionado = null;
 let horaInicioManual = false;
 let horaCierreManual = false;
@@ -1067,99 +1066,17 @@ async function copyHtmlToClipboard(htmlBody) {
   return false;
 }
 
-function waitMs(ms) {
-  return new Promise(function (resolve) {
-    setTimeout(resolve, ms);
-  });
-}
-
-async function buildImageBodyHtmlSnapshot(subject) {
-  const container = document.querySelector(".container");
-  if (!container || !window.html2canvas) return "";
-
-  const canvas = await window.html2canvas(container, {
-    backgroundColor: "#ffffff",
-    scale: 1.5,
-    useCORS: true,
-    logging: false,
-    ignoreElements: function (element) {
-      if (!element) return false;
-      if (element.id === "mail-modal") return true;
-      if (element.classList && element.classList.contains("actions")) return true;
-      return false;
-    }
-  });
-
-  const imageDataUrl = canvas.toDataURL("image/jpeg", 0.92);
-  return (
-    "<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body style='margin:0;padding:0;background:#ffffff;'>" +
-    "<div style='font-family:Arial,Helvetica,sans-serif;color:#111111;padding:10px 8px;'>" +
-    "<div style='font-size:14px;font-weight:700;margin-bottom:10px;'>" + sanitizeHeader(subject) + "</div>" +
-    "<img alt='Reporte de Gestión de Incidentes' src='" + imageDataUrl + "' style='display:block;width:100%;max-width:1400px;height:auto;border:1px solid #d4d4d4;' />" +
-    "</div></body></html>"
-  );
-}
-
-async function sendReportToPowerAutomate(payload) {
-  const response = await fetch(POWER_AUTOMATE_WEBHOOK_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error("HTTP " + response.status + " - " + body);
-  }
-}
-
 async function openMailClientFromModal() {
-  const toList = splitEmails(mailPara ? mailPara.value : "");
-  const ccList = splitEmails(mailCc ? mailCc.value : "");
-  if (toList.length === 0) {
-    alert("Ingresa al menos un correo en 'Para'.");
-    return;
-  }
-
   const subject =
     "[Reporte de Gestión de Incidente - Monitoring]" +
     "[" + getCurrentTurnoLabel() + "]" +
     "[" + getCurrentShiftPhrase() + "]" +
     "[" + formatDate(new Date()) + "]";
 
+  const htmlBody = await buildOutlookInlineHtmlSnapshot();
+  downloadHtmlFile(subject, htmlBody);
   closeMailModal();
-  await waitMs(100);
-
-  let htmlBody = "";
-  try {
-    htmlBody = await buildImageBodyHtmlSnapshot(subject);
-  } catch (error) {
-    console.warn("No se pudo generar imagen del reporte. Se enviará HTML:", error);
-  }
-  if (!htmlBody) {
-    htmlBody = await buildOutlookInlineHtmlSnapshot();
-  }
-
-  try {
-    await sendReportToPowerAutomate({
-      to: toList.join(";"),
-      cc: ccList.join(";"),
-      subject: subject,
-      htmlBody: htmlBody
-    });
-    alert("Reporte enviado correctamente por Power Automate.");
-  } catch (error) {
-    console.error(error);
-    downloadHtmlFile(subject, htmlBody);
-    const copied = await copyHtmlToClipboard(htmlBody);
-    alert(
-      copied
-        ? "No se pudo enviar por Power Automate. Se descargó el HTML y se copió al portapapeles como respaldo."
-        : "No se pudo enviar por Power Automate. Se descargó el HTML como respaldo."
-    );
-  }
+  alert("Reporte descargado en formato HTML.");
 }
 
 if (btnAbrirEnviar) {
