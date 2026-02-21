@@ -59,7 +59,7 @@ const countFinalizadosN1 = document.getElementById("count-finalizados-n1");
 const countFinalizadosN0 = document.getElementById("count-finalizados-n0");
 const countDesestimadosN1 = document.getElementById("count-desestimados-n1");
 const countDesestimadosN0 = document.getElementById("count-desestimados-n0");
-const POWER_AUTOMATE_WEBHOOK_URL = "https://defaultf260df36bc43424c8f44c85226657b.01.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/082c124a8e74486bb359dba54a14e79d/triggers/manual/paths/invoke?api-version=1";
+const POWER_AUTOMATE_WEBHOOK_URL = "https://defaultf260df36bc43424c8f44c85226657b.01.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/082c124a8e74486bb359dba54a14e79d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PtqCiuYZI154h2qgL7cozlPVEdo0FS7b9sXEpdcE5ak";
 let turnoSeleccionado = null;
 let horaInicioManual = false;
 let horaCierreManual = false;
