@@ -799,21 +799,60 @@ async function inlineImagesAsDataUri(root) {
 async function buildEmailHtmlSnapshot() {
   const container = document.querySelector(".container");
   if (!container) return "<p>Sin contenido.</p>";
+
   const clone = container.cloneNode(true);
 
-  const actions = clone.querySelector(".actions");
-  if (actions) actions.remove();
+  const originalControls = Array.from(container.querySelectorAll("input, select, textarea"));
+  const clonedControls = Array.from(clone.querySelectorAll("input, select, textarea"));
+  originalControls.forEach(function (control, index) {
+    const target = clonedControls[index];
+    if (!target) return;
 
-  clone.querySelectorAll("select, input.hora-input").forEach(function (control) {
-    replaceControlWithText(control);
+    if (control.tagName === "SELECT") {
+      target.value = control.value;
+      Array.from(target.options).forEach(function (opt) {
+        opt.selected = opt.value === control.value;
+      });
+      return;
+    }
+
+    if (control.type === "checkbox" || control.type === "radio") {
+      target.checked = control.checked;
+      return;
+    }
+
+    target.value = control.value;
+    target.setAttribute("value", control.value || "");
   });
+
+  clone.querySelectorAll("#mail-modal").forEach(function (el) { el.remove(); });
+
   await inlineImagesAsDataUri(clone);
 
-  const styleTag = document.querySelector("style");
-  const styles = styleTag ? styleTag.textContent : "";
+  let styles = "";
+  const styleNodes = Array.from(document.querySelectorAll("style"));
+  styleNodes.forEach(function (styleNode) {
+    styles += "\n" + (styleNode.textContent || "");
+  });
+
+  const cssLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
+  for (const link of cssLinks) {
+    const href = link.getAttribute("href");
+    if (!href) continue;
+    try {
+      const absoluteUrl = new URL(href, window.location.href).href;
+      const response = await fetch(absoluteUrl);
+      if (!response.ok) continue;
+      styles += "\n" + (await response.text());
+    } catch (error) {
+      console.warn("No se pudo incrustar CSS:", href, error);
+    }
+  }
 
   return (
-    "<!DOCTYPE html><html><head><meta charset='UTF-8'>" +
+    "<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'>" +
+    "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
+    "<title>Reporte de Gestión de Incidentes</title>" +
     "<style>" + styles + "</style>" +
     "</head><body>" + clone.outerHTML + "</body></html>"
   );
@@ -968,6 +1007,211 @@ function buildReportBody() {
   return lines.join("\n");
 }
 
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function getIncidentCounters() {
+  return {
+    procesoN1: (countProcesoN1 && countProcesoN1.textContent.trim()) || "0",
+    procesoN0: (countProcesoN0 && countProcesoN0.textContent.trim()) || "0",
+    finalN1: (countFinalizadosN1 && countFinalizadosN1.textContent.trim()) || "0",
+    finalN0: (countFinalizadosN0 && countFinalizadosN0.textContent.trim()) || "0",
+    desN1: (countDesestimadosN1 && countDesestimadosN1.textContent.trim()) || "0",
+    desN0: (countDesestimadosN0 && countDesestimadosN0.textContent.trim()) || "0"
+  };
+}
+
+async function getLogoDataBySelector(selector) {
+  try {
+    const img = document.querySelector(selector);
+    if (!img) return "";
+    const src = img.getAttribute("src");
+    if (!src) return "";
+    if (src.startsWith("data:")) return src;
+
+    const absoluteUrl = new URL(src, window.location.href).href;
+    const response = await fetch(absoluteUrl);
+    if (!response.ok) return "";
+    const blob = await response.blob();
+    return await blobToDataUrl(blob);
+  } catch (error) {
+    console.warn("No se pudo obtener logo para correo:", selector, error);
+    return "";
+  }
+}
+
+function buildCounterTable(title, color, n1, n0) {
+  return (
+    "<table role='presentation' width='52%' cellpadding='0' cellspacing='0' border='0' style='width:44%;max-width:460px;border-collapse:collapse;margin:0 0 8px 0;border:1px solid #bfbfbf;'>" +
+      "<tr><td colspan='2' style='background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:800;text-transform:uppercase;padding:10px 14px;border-bottom:1px solid #bfbfbf;'>" + escapeHtml(title) + "</td></tr>" +
+      "<tr>" +
+        "<td style='width:50%;background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-align:center;padding:5px;border-right:1px solid #bfbfbf;'>NIVEL 1</td>" +
+        "<td style='width:50%;background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-align:center;padding:5px;'>NIVEL 0</td>" +
+      "</tr>" +
+      "<tr>" +
+        "<td style='background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;text-align:center;padding:4px;border-top:1px solid #bfbfbf;border-right:1px solid #bfbfbf;'>" + escapeHtml(n1) + "</td>" +
+        "<td style='background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;text-align:center;padding:4px;border-top:1px solid #bfbfbf;'>" + escapeHtml(n0) + "</td>" +
+      "</tr>" +
+    "</table>"
+  );
+}
+
+function buildProcesoTables(items) {
+  const header =
+    "<tr>" +
+      "<th style='background:#c4221a;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Aplicación</th>" +
+      "<th style='background:#c4221a;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Ticket</th>" +
+      "<th style='background:#c4221a;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Fuente</th>" +
+      "<th style='background:#c4221a;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Nivel</th>" +
+      "<th style='background:#c4221a;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Inicio del Incidente (Fecha y Hora)</th>" +
+      "<th style='background:#c4221a;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Situation Manager</th>" +
+      "<th style='background:#c4221a;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Estado</th>" +
+      "<th style='background:#c4221a;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Ultimo Correo de Gestión</th>" +
+    "</tr>";
+
+  if (items.length === 0) {
+    return "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;border:1px solid #bfbfbf;margin:0 0 10px 0;'>" +
+      header +
+      "<tr><td colspan='8' style='padding:9px;font-family:Arial,Helvetica,sans-serif;font-size:13px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;'>Sin incidentes en proceso.</td></tr>" +
+    "</table>";
+  }
+
+  return items.map(function (item) {
+    const details = item.details.map(function (detail) {
+      return "<tr>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#e9e9e9;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;width:150px;'>" + escapeHtml(detail.label) + "</td>" +
+        "<td colspan='7' style='padding:7px 8px;border:1px solid #bfbfbf;background:#f5f5f5;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(detail.text) + "</td>" +
+      "</tr>";
+    }).join("");
+
+    return "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;border:1px solid #bfbfbf;margin:0 0 10px 0;'>" +
+      header +
+      "<tr>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.aplicacion) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.ticket) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.fuente) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.nivel) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.inicio) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.manager) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.estado) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.ultimoCorreo) + "</td>" +
+      "</tr>" +
+      details +
+    "</table>";
+  }).join("");
+}
+
+function buildClosedTables(items, color, emptyText) {
+  const header =
+    "<tr>" +
+      "<th style='background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Aplicación</th>" +
+      "<th style='background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Ticket</th>" +
+      "<th style='background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Fuente</th>" +
+      "<th style='background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Nivel</th>" +
+      "<th style='background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Inicio del Incidente (Fecha y Hora)</th>" +
+      "<th style='background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Fin del Incidente (Fecha y Hora)</th>" +
+      "<th style='background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;padding:7px;border:1px solid #bfbfbf;text-align:left;'>Situation Manager</th>" +
+    "</tr>";
+
+  if (items.length === 0) {
+    return "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;border:1px solid #bfbfbf;margin:0 0 10px 0;'>" +
+      header +
+      "<tr><td colspan='7' style='padding:9px;font-family:Arial,Helvetica,sans-serif;font-size:13px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;'>" + escapeHtml(emptyText) + "</td></tr>" +
+    "</table>";
+  }
+
+  return items.map(function (item) {
+    const details = item.details.map(function (detail) {
+      return "<tr>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#e9e9e9;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;width:150px;'>" + escapeHtml(detail.label) + "</td>" +
+        "<td colspan='6' style='padding:7px 8px;border:1px solid #bfbfbf;background:#f5f5f5;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(detail.text) + "</td>" +
+      "</tr>";
+    }).join("");
+
+    return "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;border:1px solid #bfbfbf;margin:0 0 10px 0;'>" +
+      header +
+      "<tr>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.aplicacion) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.ticket) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.fuente) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.nivel) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.inicio) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.fin) + "</td>" +
+        "<td style='padding:7px 8px;border:1px solid #bfbfbf;background:#ffffff;color:#000000;font-family:Arial,Helvetica,sans-serif;font-size:11px;'>" + escapeHtml(item.manager) + "</td>" +
+      "</tr>" +
+      details +
+    "</table>";
+  }).join("");
+}
+
+async function buildOutlookCompatibleBody(subject) {
+  const proceso = readIncidentRows("section.rojo table.tabla-proceso-incidente");
+  const finalizados = readIncidentRows("section.verde table.tabla-finalizados-incidente");
+  const desestimados = readIncidentRows("section.morado table.tabla-desestimados-incidente");
+  const counters = getIncidentCounters();
+
+  const logoKyndryl = await getLogoDataBySelector(".top-logos .brand img");
+  const logoBcp = await getLogoDataBySelector(".top-logos .brand.right img");
+
+  const horaEntrada = (horaInicioFull && horaInicioFull.value) ? horaInicioFull.value : "";
+  const horaSalida = (horaCierreFull && horaCierreFull.value) ? horaCierreFull.value : "";
+  const saliente = (ingenieroSaliente && ingenieroSaliente.value) ? ingenieroSaliente.value : "";
+  const entrante = (ingenieroEntrante && ingenieroEntrante.value) ? ingenieroEntrante.value : "";
+
+  const title = "REPORTE DE GESTIÓN DE INCIDENTES - SQUAD MONITORING";
+
+  return (
+    "<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>" + escapeHtml(subject) + "</title></head>" +
+    "<body style='margin:0;padding:0;background:#ffffff;color:#000000;'>" +
+      "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;background:#ffffff;'>" +
+        "<tr><td align='center' style='padding:6px;'>" +
+          "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%;max-width:1150px;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;color:#000000;'>" +
+            "<tr>" +
+              "<td style='width:180px;vertical-align:middle;padding:4px 0;'>" +
+                (logoKyndryl ? "<img src='" + logoKyndryl + "' alt='Kyndryl' style='display:block;width:108px;height:auto;border:0;'>" : "") +
+              "</td>" +
+              "<td style='text-align:center;vertical-align:middle;padding:4px 8px;font-size:26px;font-weight:800;line-height:1.15;'>" + escapeHtml(title) + "</td>" +
+              "<td style='width:220px;text-align:right;vertical-align:middle;padding:4px 0;'>" +
+                (logoBcp ? "<img src='" + logoBcp + "' alt='BCP' style='display:inline-block;width:150px;height:auto;border:0;'>" : "") +
+              "</td>" +
+            "</tr>" +
+            "<tr><td colspan='3' style='padding-top:8px;padding-bottom:12px;'>" +
+              "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;'>" +
+                "<tr>" +
+                  "<td style='width:55%;vertical-align:top;font-size:18px;line-height:1.35;text-transform:uppercase;padding-right:8px;'>" +
+                    "<div>Incidentes masivos en proceso</div><div>Incidentes masivos finalizados</div>" +
+                  "</td>" +
+                  "<td style='width:45%;vertical-align:top;'>" +
+                    "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;'>" +
+                      "<tr><td style='font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 6px 2px 0;'>Hora de entrada:</td><td style='font-size:11px;padding:2px 0;'><span style='display:inline-block;min-width:190px;border:1px solid #bfbfbf;padding:3px 7px;'>" + escapeHtml(horaEntrada) + "</span></td></tr>" +
+                      "<tr><td style='font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 6px 2px 0;'>Hora de salida:</td><td style='font-size:11px;padding:2px 0;'><span style='display:inline-block;min-width:190px;border:1px solid #bfbfbf;padding:3px 7px;'>" + escapeHtml(horaSalida) + "</span></td></tr>" +
+                      "<tr><td style='font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 6px 2px 0;'>Ingeniero saliente:</td><td style='font-size:11px;padding:2px 0;'><span style='display:inline-block;min-width:190px;border:1px solid #bfbfbf;padding:3px 7px;'>" + escapeHtml(saliente) + "</span></td></tr>" +
+                      "<tr><td style='font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 6px 2px 0;'>Ingeniero entrante:</td><td style='font-size:11px;padding:2px 0;'><span style='display:inline-block;min-width:190px;border:1px solid #bfbfbf;padding:3px 7px;'>" + escapeHtml(entrante) + "</span></td></tr>" +
+                    "</table>" +
+                  "</td>" +
+                "</tr>" +
+              "</table>" +
+            "</td></tr>" +
+            "<tr><td colspan='3' style='padding:0 0 12px 0;'>" + buildCounterTable("Incidentes masivos en proceso", "#c4221a", counters.procesoN1, counters.procesoN0) + "</td></tr>" +
+            "<tr><td colspan='3' style='padding:0 0 12px 0;'>" + buildProcesoTables(proceso) + "</td></tr>" +
+            "<tr><td colspan='3' style='padding:0 0 12px 0;'>" + buildCounterTable("Incidentes masivos finalizados", "#138a12", counters.finalN1, counters.finalN0) + "</td></tr>" +
+            "<tr><td colspan='3' style='padding:0 0 12px 0;'>" + buildClosedTables(finalizados, "#138a12", "Sin incidentes finalizados.") + "</td></tr>" +
+            "<tr><td colspan='3' style='padding:0 0 12px 0;'>" + buildCounterTable("Incidentes desestimados", "#b57edc", counters.desN1, counters.desN0) + "</td></tr>" +
+            "<tr><td colspan='3' style='padding:0 0 12px 0;'>" + buildClosedTables(desestimados, "#b57edc", "Sin incidentes desestimados.") + "</td></tr>" +
+            "<tr><td colspan='3' style='padding:8px 0 0 0;font-size:13px;color:#000000;'><strong>Notas:</strong> Este documento es de uso interno. No compartir fuera de la organización.</td></tr>" +
+          "</table>" +
+        "</td></tr>" +
+      "</table>" +
+    "</body></html>"
+  );
+}
+
 function sanitizeFilename(text) {
   return String(text || "reporte")
     .replace(/[\\/:*?"<>|]+/g, "_")
@@ -1073,10 +1317,10 @@ async function openMailClientFromModal() {
     "[" + getCurrentShiftPhrase() + "]" +
     "[" + formatDate(new Date()) + "]";
 
-  const htmlBody = await buildOutlookInlineHtmlSnapshot();
-  downloadHtmlFile(subject, htmlBody);
+  const htmlBody = await buildOutlookCompatibleBody(subject);
+  downloadHtmlFile(subject + "_correo", htmlBody);
   closeMailModal();
-  alert("Reporte descargado en formato HTML.");
+  alert("Reporte descargado en HTML compatible para pegar/enviar en Outlook.");
 }
 
 if (btnAbrirEnviar) {
