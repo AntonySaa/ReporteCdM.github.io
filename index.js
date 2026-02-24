@@ -65,6 +65,7 @@ let horaCierreManual = false;
 let procesoObservers = [];
 let finalizadosObservers = [];
 let desestimadosObservers = [];
+const POWER_AUTOMATE_WEBHOOK_URL = "https://defaultf260df36bc43424c8f44c85226657b.01.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/01a55d87cf454c38af44551c2f7d8c25/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PX2KyATU7XgRkab_AaNEivvqpcTVaQ29hdwyM6IA_dA";
 
 fillEngineers(ingenieroSaliente, " - ");
 fillEngineers(ingenieroEntrante, " - ");
@@ -1294,6 +1295,27 @@ function downloadHtmlFile(subject, htmlBody) {
   URL.revokeObjectURL(url);
 }
 
+async function sendReportWithPowerAutomate(toList, ccList, subject, htmlBody) {
+  const payload = {
+    to: toList.join(","),
+    cc: ccList.join(","),
+    subject: subject,
+    htmlBody: htmlBody
+  };
+
+  const response = await fetch(POWER_AUTOMATE_WEBHOOK_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error("HTTP " + response.status + " al enviar a Power Automate");
+  }
+}
+
 async function copyHtmlToClipboard(htmlBody) {
   try {
     if (navigator.clipboard && window.ClipboardItem) {
@@ -1311,6 +1333,14 @@ async function copyHtmlToClipboard(htmlBody) {
 }
 
 async function openMailClientFromModal() {
+  const toList = splitEmails(mailPara && mailPara.value ? mailPara.value : "");
+  const ccList = splitEmails(mailCc && mailCc.value ? mailCc.value : "");
+  if (toList.length === 0) {
+    alert("Ingresa al menos un correo en el campo PARA.");
+    if (mailPara) mailPara.focus();
+    return;
+  }
+
   const subject =
     "[Reporte de Gestión de Incidente - Monitoring]" +
     "[" + getCurrentTurnoLabel() + "]" +
@@ -1318,9 +1348,16 @@ async function openMailClientFromModal() {
     "[" + formatDate(new Date()) + "]";
 
   const htmlBody = await buildOutlookCompatibleBody(subject);
-  downloadHtmlFile(subject + "_correo", htmlBody);
-  closeMailModal();
-  alert("Reporte descargado en HTML compatible para pegar/enviar en Outlook.");
+  try {
+    await sendReportWithPowerAutomate(toList, ccList, subject, htmlBody);
+    closeMailModal();
+    alert("Reporte enviado correctamente por Power Automate.");
+  } catch (error) {
+    console.error(error);
+    downloadHtmlFile(subject + "_correo", htmlBody);
+    closeMailModal();
+    alert("No se pudo enviar por Power Automate. Se descargó el HTML como respaldo.");
+  }
 }
 
 if (btnAbrirEnviar) {
