@@ -50,58 +50,51 @@
       display:flex;
     }
     .auth-card{
-      width:min(720px, 100%);
+      width:min(640px, 100%);
       background:linear-gradient(135deg, #ff1f8e 0%, #ff5f2d 100%);
       border:1px solid rgba(0,0,0,.12);
       box-shadow:0 16px 40px rgba(0,0,0,.25);
-      padding:36px 42px 28px;
+      padding:28px 32px 24px;
     }
     .auth-field{
       display:flex;
       align-items:center;
       background:#fff;
       border:1px solid #e5e5e5;
-      height:74px;
-      margin-bottom:16px;
-      padding:0 20px;
+      height:64px;
+      margin-bottom:12px;
+      padding:0 16px;
       gap:10px;
     }
     .auth-field input{
       border:none;
       outline:none;
       width:100%;
-      font-size:18px;
+      font-size:16px;
       color:#0b5b66;
       background:transparent;
     }
     .auth-icon{
       color:#0b5b66;
-      font-size:26px;
-      width:28px;
+      font-size:22px;
+      width:24px;
       text-align:center;
       user-select:none;
     }
     .auth-actions{
-      margin-top:14px;
+      margin-top:6px;
       display:flex;
       align-items:center;
-      justify-content:space-between;
-      gap:14px;
-    }
-    .auth-forgot{
-      color:#fff;
-      font-size:36px;
-      line-height:1;
-      opacity:.95;
+      justify-content:flex-end;
     }
     .auth-login-btn{
-      min-width:220px;
-      height:82px;
+      min-width:200px;
+      height:68px;
       border:none;
       cursor:pointer;
       background:#4a0d3f;
       color:#fff;
-      font-size:36px;
+      font-size:28px;
       font-weight:700;
       letter-spacing:.5px;
       text-transform:uppercase;
@@ -645,7 +638,6 @@
         <span class="auth-icon" aria-hidden="true">🔒</span>
       </div>
       <div class="auth-actions">
-        <span class="auth-forgot" aria-hidden="true">Forgot Password?</span>
         <button type="submit" class="auth-login-btn">LOGIN</button>
       </div>
       <div id="auth-error" class="auth-error" role="alert" aria-live="polite"></div>
