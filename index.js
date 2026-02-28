@@ -965,38 +965,6 @@ async function buildEmailHtmlSnapshot() {
   );
 }
 
-function downloadEml(toList, ccList, subject, htmlBody) {
-  const headers = [
-    "To: " + sanitizeHeader(toList.join(",")),
-    ccList.length ? "Cc: " + sanitizeHeader(ccList.join(",")) : "",
-    "Subject: " + sanitizeHeader(subject),
-    "MIME-Version: 1.0",
-    "Content-Type: text/html; charset=UTF-8",
-    "Content-Transfer-Encoding: 8bit",
-    ""
-  ].filter(Boolean);
-
-  const emlContent = headers.join("\r\n") + "\r\n" + htmlBody;
-  const blob = new Blob([emlContent], { type: "message/rfc822;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  const now = new Date();
-  const filename =
-    "Reporte_Monitoring_" +
-    now.getFullYear() +
-    pad2(now.getMonth() + 1) +
-    pad2(now.getDate()) + "_" +
-    pad2(now.getHours()) +
-    pad2(now.getMinutes()) +
-    ".eml";
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
 function readIncidentRows(sectionSelector) {
   const incidents = [];
 
@@ -1039,79 +1007,6 @@ function readIncidentRows(sectionSelector) {
   });
 
   return incidents;
-}
-
-function buildReportBody() {
-  const proceso = readIncidentRows("section.rojo table.tabla-proceso-incidente");
-  const finalizados = readIncidentRows("section.verde table.tabla-finalizados-incidente");
-  const desestimados = readIncidentRows("section.morado table.tabla-desestimados-incidente");
-  const lines = [];
-
-  lines.push("REPORTE DE GESTION DE INCIDENTES - MONITORING");
-  lines.push(getCurrentTurnoLabel());
-  lines.push(getCurrentShiftPhrase());
-  lines.push("Fecha: " + formatDate(new Date()));
-  lines.push("");
-
-  lines.push("INCIDENTES MASIVOS EN PROCESO");
-  if (proceso.length === 0) {
-    lines.push("Sin incidentes.");
-  } else {
-    proceso.forEach(function (item, index) {
-      lines.push((index + 1) + ". " + item.aplicacion);
-      lines.push("Ticket: " + item.ticket);
-      lines.push("Fuente: " + item.fuente);
-      lines.push("Nivel: " + item.nivel);
-      lines.push("Inicio: " + item.inicio);
-      lines.push("Situation Manager: " + item.manager);
-      lines.push("Estado: " + item.estado);
-      lines.push("Ultimo Correo de Gestion: " + item.ultimoCorreo);
-      item.details.forEach(function (detail) {
-        lines.push(detail.label + ": " + detail.text);
-      });
-      lines.push("");
-    });
-  }
-
-  lines.push("INCIDENTES MASIVOS FINALIZADOS");
-  if (finalizados.length === 0) {
-    lines.push("Sin incidentes.");
-  } else {
-    finalizados.forEach(function (item, index) {
-      lines.push((index + 1) + ". " + item.aplicacion);
-      lines.push("Ticket: " + item.ticket);
-      lines.push("Fuente: " + item.fuente);
-      lines.push("Nivel: " + item.nivel);
-      lines.push("Inicio: " + item.inicio);
-      lines.push("Fin: " + item.fin);
-      lines.push("Situation Manager: " + item.manager);
-      item.details.forEach(function (detail) {
-        lines.push(detail.label + ": " + detail.text);
-      });
-      lines.push("");
-    });
-  }
-
-  lines.push("INCIDENTES DESESTIMADOS");
-  if (desestimados.length === 0) {
-    lines.push("Sin incidentes.");
-  } else {
-    desestimados.forEach(function (item, index) {
-      lines.push((index + 1) + ". " + item.aplicacion);
-      lines.push("Ticket: " + item.ticket);
-      lines.push("Fuente: " + item.fuente);
-      lines.push("Nivel: " + item.nivel);
-      lines.push("Inicio: " + item.inicio);
-      lines.push("Fin: " + item.fin);
-      lines.push("Situation Manager: " + item.manager);
-      item.details.forEach(function (detail) {
-        lines.push(detail.label + ": " + detail.text);
-      });
-      lines.push("");
-    });
-  }
-
-  return lines.join("\n");
 }
 
 function escapeHtml(value) {
@@ -1471,7 +1366,7 @@ async function openMailClientFromModal() {
     console.error(error);
     downloadHtmlFile(subject + "_correo", htmlBody);
     closeMailModal();
-    alert("No se pudo enviar por Power Automate. Se descargó el HTML como respaldo.");
+    alert("No se pudo enviar por Power Automate. Se generó el HTML como respaldo.");
   }
 }
 
