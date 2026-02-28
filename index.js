@@ -39,6 +39,13 @@ function fillEngineers(select, selectedName) {
 
 const btnManana = document.getElementById("btn-manana");
 const btnNoche = document.getElementById("btn-noche");
+const appRoot = document.getElementById("app-root");
+const authScreen = document.getElementById("auth-screen");
+const authForm = document.getElementById("auth-form");
+const authUsername = document.getElementById("auth-username");
+const authPassword = document.getElementById("auth-password");
+const authError = document.getElementById("auth-error");
+const btnLogout = document.getElementById("btn-logout");
 const shiftRange = document.getElementById("shift-range");
 const dateTag = document.getElementById("current-date-tag");
 const horaInicioFull = document.getElementById("hora-inicio-full");
@@ -61,6 +68,9 @@ const countDesestimadosN1 = document.getElementById("count-desestimados-n1");
 const countDesestimadosN0 = document.getElementById("count-desestimados-n0");
 const LOGO_KYNDRYL_EMAIL_URL = "https://antonysaa.github.io/ReporteCdM.github.io/kyndryl-logo.png";
 const LOGO_BCP_EMAIL_URL = "https://antonysaa.github.io/ReporteCdM.github.io/aa.png";
+const AUTH_USERNAME = "reportecdm";
+const AUTH_PASSWORD = "reportecdm2026@";
+const AUTH_SESSION_KEY = "reporte_cdm_auth_ok";
 let turnoSeleccionado = null;
 let horaInicioManual = false;
 let horaCierreManual = false;
@@ -68,9 +78,68 @@ let procesoObservers = [];
 let finalizadosObservers = [];
 let desestimadosObservers = [];
 const POWER_AUTOMATE_WEBHOOK_URL = "https://defaultf260df36bc43424c8f44c85226657b.01.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/01a55d87cf454c38af44551c2f7d8c25/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PX2KyATU7XgRkab_AaNEivvqpcTVaQ29hdwyM6IA_dA";
+let appBooted = false;
 
 fillEngineers(ingenieroSaliente, " - ");
 fillEngineers(ingenieroEntrante, " - ");
+
+function showApp() {
+  if (appRoot) appRoot.classList.remove("is-hidden");
+  if (authScreen) {
+    authScreen.classList.remove("is-active");
+    authScreen.setAttribute("aria-hidden", "true");
+  }
+  if (btnLogout) btnLogout.classList.add("is-visible");
+  document.body.classList.remove("auth-locked");
+}
+
+function showAuth() {
+  if (appRoot) appRoot.classList.add("is-hidden");
+  if (authScreen) {
+    authScreen.classList.add("is-active");
+    authScreen.setAttribute("aria-hidden", "false");
+  }
+  if (btnLogout) btnLogout.classList.remove("is-visible");
+  document.body.classList.add("auth-locked");
+  if (authUsername) authUsername.focus();
+}
+
+function markAuthenticated() {
+  localStorage.setItem(AUTH_SESSION_KEY, "1");
+}
+
+function clearAuthentication() {
+  localStorage.removeItem(AUTH_SESSION_KEY);
+}
+
+function isAuthenticated() {
+  return localStorage.getItem(AUTH_SESSION_KEY) === "1";
+}
+
+function handleAuthSubmit(event) {
+  event.preventDefault();
+  const username = (authUsername && authUsername.value ? authUsername.value : "").trim();
+  const password = authPassword && authPassword.value ? authPassword.value : "";
+
+  if (username === AUTH_USERNAME && password === AUTH_PASSWORD) {
+    if (authError) authError.textContent = "";
+    if (authPassword) authPassword.value = "";
+    markAuthenticated();
+    showApp();
+    startApp();
+    return;
+  }
+
+  if (authError) authError.textContent = "Usuario o contraseña incorrectos.";
+  if (authPassword) authPassword.value = "";
+  if (authPassword) authPassword.focus();
+}
+
+function handleLogout() {
+  clearAuthentication();
+  closeMailModal();
+  showAuth();
+}
 
 function applyShift(turno, currentDate) {
   const dateText = formatDate(currentDate || new Date());
@@ -1406,6 +1475,12 @@ async function openMailClientFromModal() {
   }
 }
 
+if (authForm) {
+  authForm.addEventListener("submit", handleAuthSubmit);
+}
+if (btnLogout) {
+  btnLogout.addEventListener("click", handleLogout);
+}
 if (btnAbrirEnviar) {
   btnAbrirEnviar.addEventListener("click", openMailModal);
 }
@@ -1445,14 +1520,25 @@ if (excelFileInput) {
   });
 }
 
-clearSectionsOnLoad();
-enableEditableEstadoActual();
-enableEditableProcesoMainFields();
-updateProcesoLevelCounters();
-watchProcesoTableCounters();
-updateFinalizadosLevelCounters();
-watchFinalizadosTableCounters();
-updateDesestimadosLevelCounters();
-watchDesestimadosTableCounters();
-refreshNow();
-refreshAtNextMinute();
+function startApp() {
+  if (appBooted) return;
+  appBooted = true;
+  clearSectionsOnLoad();
+  enableEditableEstadoActual();
+  enableEditableProcesoMainFields();
+  updateProcesoLevelCounters();
+  watchProcesoTableCounters();
+  updateFinalizadosLevelCounters();
+  watchFinalizadosTableCounters();
+  updateDesestimadosLevelCounters();
+  watchDesestimadosTableCounters();
+  refreshNow();
+  refreshAtNextMinute();
+}
+
+if (isAuthenticated()) {
+  showApp();
+  startApp();
+} else {
+  showAuth();
+}

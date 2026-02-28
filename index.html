@@ -25,6 +25,116 @@
       background:var(--negro);
     }
 
+    body.auth-locked{
+      overflow:hidden;
+    }
+
+    .app-root{
+      display:block;
+    }
+    .app-root.is-hidden{
+      display:none;
+    }
+
+    .auth-screen{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:#e6e6e6;
+      z-index:5000;
+      padding:20px;
+    }
+    .auth-screen.is-active{
+      display:flex;
+    }
+    .auth-card{
+      width:min(720px, 100%);
+      background:linear-gradient(135deg, #ff1f8e 0%, #ff5f2d 100%);
+      border:1px solid rgba(0,0,0,.12);
+      box-shadow:0 16px 40px rgba(0,0,0,.25);
+      padding:36px 42px 28px;
+    }
+    .auth-field{
+      display:flex;
+      align-items:center;
+      background:#fff;
+      border:1px solid #e5e5e5;
+      height:74px;
+      margin-bottom:16px;
+      padding:0 20px;
+      gap:10px;
+    }
+    .auth-field input{
+      border:none;
+      outline:none;
+      width:100%;
+      font-size:18px;
+      color:#0b5b66;
+      background:transparent;
+    }
+    .auth-icon{
+      color:#0b5b66;
+      font-size:26px;
+      width:28px;
+      text-align:center;
+      user-select:none;
+    }
+    .auth-actions{
+      margin-top:14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .auth-forgot{
+      color:#fff;
+      font-size:36px;
+      line-height:1;
+      opacity:.95;
+    }
+    .auth-login-btn{
+      min-width:220px;
+      height:82px;
+      border:none;
+      cursor:pointer;
+      background:#4a0d3f;
+      color:#fff;
+      font-size:36px;
+      font-weight:700;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+      transition:filter .2s ease;
+    }
+    .auth-login-btn:hover{ filter:brightness(1.08); }
+    .auth-error{
+      min-height:22px;
+      margin-top:8px;
+      color:#fff;
+      font-size:15px;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+
+    .logout-btn{
+      position:fixed;
+      right:16px;
+      top:10px;
+      z-index:3000;
+      border:1px solid var(--borde);
+      background:#fff;
+      color:#000;
+      height:30px;
+      padding:0 12px;
+      font-size:12px;
+      font-weight:700;
+      text-transform:uppercase;
+      cursor:pointer;
+      display:none;
+    }
+    .logout-btn.is-visible{ display:inline-block; }
+
     .container{
       max-width:1080px;
       margin:0 auto;
@@ -524,7 +634,28 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div id="auth-screen" class="auth-screen is-active" aria-hidden="false">
+    <form id="auth-form" class="auth-card" autocomplete="off">
+      <div class="auth-field">
+        <input id="auth-username" type="text" placeholder="Username" />
+        <span class="auth-icon" aria-hidden="true">👤</span>
+      </div>
+      <div class="auth-field">
+        <input id="auth-password" type="password" placeholder="********" />
+        <span class="auth-icon" aria-hidden="true">🔒</span>
+      </div>
+      <div class="auth-actions">
+        <span class="auth-forgot" aria-hidden="true">Forgot Password?</span>
+        <button type="submit" class="auth-login-btn">LOGIN</button>
+      </div>
+      <div id="auth-error" class="auth-error" role="alert" aria-live="polite"></div>
+    </form>
+  </div>
+
+  <button id="btn-logout" class="logout-btn" type="button">Cerrar sesión</button>
+
+  <div id="app-root" class="app-root is-hidden">
+    <div class="container">
     <div class="top-logos">
       <div class="brand">
         <img class="brand-logo" src="./kyndryl-logo.png" alt="Kyndryl" />
@@ -894,7 +1025,7 @@
     <input id="excel-file-input" type="file" accept=".xlsx,.xls" style="display:none;" />
   </div>
 
-  <div id="mail-modal" class="mail-modal" aria-hidden="true">
+    <div id="mail-modal" class="mail-modal" aria-hidden="true">
     <div class="mail-modal-card" role="dialog" aria-modal="true" aria-labelledby="mail-modal-title">
       <h3 id="mail-modal-title" class="mail-modal-title">Descargar reporte (HTML)</h3>
       <div class="mail-field">
@@ -910,6 +1041,7 @@
         <button type="button" id="btn-cerrar-enviar" class="btn-secondary">Cancelar</button>
         <button type="button" id="btn-confirmar-enviar" class="btn-primary">Descargar HTML</button>
       </div>
+    </div>
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
