@@ -59,6 +59,8 @@ const countFinalizadosN1 = document.getElementById("count-finalizados-n1");
 const countFinalizadosN0 = document.getElementById("count-finalizados-n0");
 const countDesestimadosN1 = document.getElementById("count-desestimados-n1");
 const countDesestimadosN0 = document.getElementById("count-desestimados-n0");
+const LOGO_KYNDRYL_EMAIL_URL = "https://antonysaa.github.io/ReporteCdM.github.io/kyndryl-logo.png";
+const LOGO_BCP_EMAIL_URL = "https://antonysaa.github.io/ReporteCdM.github.io/aa.png";
 let turnoSeleccionado = null;
 let horaInicioManual = false;
 let horaCierreManual = false;
@@ -779,6 +781,41 @@ function blobToDataUrl(blob) {
   });
 }
 
+function isSvgDataUrl(dataUrl) {
+  return typeof dataUrl === "string" && dataUrl.indexOf("data:image/svg+xml") === 0;
+}
+
+function svgDataUrlToPngDataUrl(svgDataUrl, targetWidth) {
+  return new Promise(function (resolve) {
+    try {
+      const img = new Image();
+      img.onload = function () {
+        const width = targetWidth || img.naturalWidth || img.width || 108;
+        const ratio = (img.naturalWidth || img.width) > 0
+          ? (img.naturalHeight || img.height) / (img.naturalWidth || img.width)
+          : 0.35;
+        const height = Math.max(1, Math.round(width * ratio));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve("");
+          return;
+        }
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = function () { resolve(""); };
+      img.src = svgDataUrl;
+    } catch (error) {
+      console.warn("No se pudo convertir SVG a PNG para correo:", error);
+      resolve("");
+    }
+  });
+}
+
 async function inlineImagesAsDataUri(root) {
   const images = Array.from(root.querySelectorAll("img"));
   await Promise.all(images.map(async function (img) {
@@ -1040,7 +1077,16 @@ async function getLogoDataBySelector(selector) {
     const response = await fetch(absoluteUrl);
     if (!response.ok) return "";
     const blob = await response.blob();
-    return await blobToDataUrl(blob);
+    const dataUrl = await blobToDataUrl(blob);
+    if (!dataUrl) return "";
+
+    if (isSvgDataUrl(dataUrl)) {
+      const targetWidth = selector.indexOf("brand.right") >= 0 ? 150 : 108;
+      const pngDataUrl = await svgDataUrlToPngDataUrl(dataUrl, targetWidth);
+      if (pngDataUrl) return pngDataUrl;
+    }
+
+    return dataUrl;
   } catch (error) {
     console.warn("No se pudo obtener logo para correo:", selector, error);
     return "";
@@ -1157,8 +1203,8 @@ async function buildOutlookCompatibleBody(subject) {
   const desestimados = readIncidentRows("section.morado table.tabla-desestimados-incidente");
   const counters = getIncidentCounters();
 
-  const logoKyndryl = await getLogoDataBySelector(".top-logos .brand img");
-  const logoBcp = await getLogoDataBySelector(".top-logos .brand.right img");
+  const logoKyndryl = LOGO_KYNDRYL_EMAIL_URL || await getLogoDataBySelector(".top-logos .brand img");
+  const logoBcp = LOGO_BCP_EMAIL_URL || await getLogoDataBySelector(".top-logos .brand.right img");
 
   const horaEntrada = (horaInicioFull && horaInicioFull.value) ? horaInicioFull.value : "";
   const horaSalida = (horaCierreFull && horaCierreFull.value) ? horaCierreFull.value : "";
