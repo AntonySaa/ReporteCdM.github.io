@@ -118,10 +118,10 @@ function isAuthenticated() {
 
 function handleAuthSubmit(event) {
   event.preventDefault();
-  const username = (authUsername && authUsername.value ? authUsername.value : "").trim();
-  const password = authPassword && authPassword.value ? authPassword.value : "";
+  const username = (authUsername && authUsername.value ? authUsername.value : "").trim().toLowerCase();
+  const password = (authPassword && authPassword.value ? authPassword.value : "").trim();
 
-  if (username === AUTH_USERNAME && password === AUTH_PASSWORD) {
+  if (username === AUTH_USERNAME.toLowerCase() && password === AUTH_PASSWORD) {
     if (authError) authError.textContent = "";
     if (authPassword) authPassword.value = "";
     markAuthenticated();
