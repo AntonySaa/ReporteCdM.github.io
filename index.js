@@ -1167,8 +1167,9 @@ async function buildOutlookCompatibleBody(subject) {
   const desestimados = readIncidentRows("section.morado table.tabla-desestimados-incidente");
   const counters = getIncidentCounters();
 
-  const logoKyndryl = LOGO_KYNDRYL_EMAIL_URL || await getLogoDataBySelector(".top-logos .brand img");
-  const logoBcp = LOGO_BCP_EMAIL_URL || await getLogoDataBySelector(".top-logos .brand.right img");
+  // Prefer embedded image data for Outlook forwards; fallback to public URLs.
+  const logoKyndryl = await getLogoDataBySelector(".top-logos .brand img") || LOGO_KYNDRYL_EMAIL_URL;
+  const logoBcp = await getLogoDataBySelector(".top-logos .brand.right img") || LOGO_BCP_EMAIL_URL;
 
   const horaEntrada = (horaInicioFull && horaInicioFull.value) ? horaInicioFull.value : "";
   const horaSalida = (horaCierreFull && horaCierreFull.value) ? horaCierreFull.value : "";
