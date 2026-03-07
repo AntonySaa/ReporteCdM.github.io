@@ -74,6 +74,7 @@ const AUTH_SESSION_KEY = "reporte_cdm_auth_ok";
 let turnoSeleccionado = null;
 let horaInicioManual = false;
 let horaCierreManual = false;
+let desestimadosCountManualOverride = false;
 let procesoObservers = [];
 let finalizadosObservers = [];
 let desestimadosObservers = [];
@@ -378,6 +379,15 @@ function formatDateTimeLocal(date) {
   );
 }
 
+function formatTodayMidnight() {
+  const now = new Date();
+  return (
+    pad2(now.getDate()) + "/" +
+    pad2(now.getMonth() + 1) + "/" +
+    now.getFullYear() + " 00:00"
+  );
+}
+
 function normalizeHumanDateTime(text) {
   const value = String(text || "").trim();
   if (!value) return "";
@@ -470,6 +480,14 @@ function mapExcelRowsToIncidents(rows) {
     };
 
     const bucket = classifyEstado(estado, fin, rawNivel);
+    if (bucket === "proceso") {
+      incident.estado = "EN PROCESO";
+
+      const ultimoCorreoLimpio = String(incident.ultimoCorreo || "").trim();
+      if (!ultimoCorreoLimpio || ultimoCorreoLimpio === "-") {
+        incident.ultimoCorreo = formatTodayMidnight();
+      }
+    }
     if (sintoma) incident.details.push({ label: "Síntoma", text: sintoma });
     if (bucket === "proceso") {
       incident.details.push({ label: "Estado actual", text: estadoActual || "Pendiente de actualización." });
@@ -646,6 +664,7 @@ async function syncFromExcelFile(file) {
     data.desestimados
   );
 
+  desestimadosCountManualOverride = false;
   refreshReportNow();
   watchProcesoTableCounters();
   watchFinalizadosTableCounters();
@@ -737,6 +756,8 @@ function watchFinalizadosTableCounters() {
 }
 
 function updateDesestimadosLevelCounters() {
+  if (desestimadosCountManualOverride) return;
+
   let n1 = 0;
   let n0 = 0;
   const tables = document.querySelectorAll("section.morado table.tabla-desestimados-incidente");
@@ -761,6 +782,44 @@ function updateDesestimadosLevelCounters() {
   if (countDesestimadosN0) countDesestimadosN0.textContent = String(n0);
 }
 
+function sanitizeCounterValue(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits === "" ? "0" : digits;
+}
+
+function enableEditableDesestimadosCounters() {
+  const counters = [countDesestimadosN1, countDesestimadosN0].filter(Boolean);
+  if (counters.length === 0) return;
+
+  counters.forEach(function (counter) {
+    if (counter.dataset.editableReady === "1") return;
+
+    counter.dataset.editableReady = "1";
+    counter.contentEditable = "true";
+    counter.setAttribute("spellcheck", "false");
+    counter.style.cursor = "text";
+    counter.title = "Editable manualmente";
+
+    counter.addEventListener("input", function () {
+      const clean = sanitizeCounterValue(counter.textContent);
+      if (counter.textContent !== clean) counter.textContent = clean;
+      desestimadosCountManualOverride = true;
+    });
+
+    counter.addEventListener("blur", function () {
+      counter.textContent = sanitizeCounterValue(counter.textContent);
+      desestimadosCountManualOverride = true;
+    });
+
+    counter.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        counter.blur();
+      }
+    });
+  });
+}
+
 function watchDesestimadosTableCounters() {
   desestimadosObservers = disconnectObservers(desestimadosObservers);
   const tableBodies = document.querySelectorAll("section.morado table.tabla-desestimados-incidente tbody");
@@ -782,6 +841,7 @@ function refreshReportNow() {
   refreshNow();
   enableEditableEstadoActual();
   enableEditableProcesoMainFields();
+  enableEditableDesestimadosCounters();
   updateProcesoLevelCounters();
   updateFinalizadosLevelCounters();
   updateDesestimadosLevelCounters();
@@ -1059,7 +1119,7 @@ async function getLogoDataBySelector(selector) {
 
 function buildCounterTable(title, color, n1, n0) {
   return (
-    "<table role='presentation' width='52%' cellpadding='0' cellspacing='0' border='0' style='width:44%;max-width:460px;border-collapse:collapse;margin:0 0 8px 0;border:1px solid #bfbfbf;'>" +
+    "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='width:58%;max-width:980px;border-collapse:collapse;margin:0 0 8px 0;border:1px solid #bfbfbf;'>" +
       "<tr><td colspan='2' style='background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:800;text-transform:uppercase;padding:10px 14px;border-bottom:1px solid #bfbfbf;'>" + escapeHtml(title) + "</td></tr>" +
       "<tr>" +
         "<td style='width:50%;background:" + color + ";color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;text-align:center;padding:5px;border-right:1px solid #bfbfbf;'>NIVEL 1</td>" +
@@ -1176,21 +1236,22 @@ async function buildOutlookCompatibleBody(subject) {
   const saliente = (ingenieroSaliente && ingenieroSaliente.value) ? ingenieroSaliente.value : "";
   const entrante = (ingenieroEntrante && ingenieroEntrante.value) ? ingenieroEntrante.value : "";
 
-  const title = "REPORTE DE GESTIÓN DE INCIDENTES - SQUAD MONITORING";
+  const titleLine1 = "REPORTE DE GESTIÓN DE INCIDENTES - SQUAD";
+  const titleLine2 = "MONITORING";
 
   return (
     "<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>" + escapeHtml(subject) + "</title></head>" +
     "<body style='margin:0;padding:0;background:#ffffff;color:#000000;'>" +
       "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;background:#ffffff;'>" +
         "<tr><td align='center' style='padding:6px;'>" +
-          "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%;max-width:1150px;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;color:#000000;'>" +
+          "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='width:98%;max-width:1650px;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;color:#000000;'>" +
             "<tr>" +
-              "<td style='width:180px;vertical-align:middle;padding:4px 0;'>" +
-                (logoKyndryl ? "<img src='" + logoKyndryl + "' alt='Kyndryl' style='display:block;width:108px;height:auto;border:0;'>" : "") +
+              "<td style='width:230px;vertical-align:middle;padding:4px 0;'>" +
+                (logoKyndryl ? "<img src='" + logoKyndryl + "' alt='Kyndryl' style='display:block;width:170px;height:54px;border:0;'>" : "") +
               "</td>" +
-              "<td style='text-align:center;vertical-align:middle;padding:4px 8px;font-size:26px;font-weight:800;line-height:1.15;'>" + escapeHtml(title) + "</td>" +
-              "<td style='width:220px;text-align:right;vertical-align:middle;padding:4px 0;'>" +
-                (logoBcp ? "<img src='" + logoBcp + "' alt='BCP' style='display:inline-block;width:150px;height:auto;border:0;'>" : "") +
+              "<td style='text-align:center;vertical-align:middle;padding:4px 8px;font-size:26px;font-weight:800;line-height:1.15;'>" + escapeHtml(titleLine1) + "<br>" + escapeHtml(titleLine2) + "</td>" +
+              "<td style='width:230px;text-align:right;vertical-align:middle;padding:4px 0;'>" +
+                (logoBcp ? "<img src='" + logoBcp + "' alt='BCP' style='display:inline-block;width:170px;height:54px;border:0;'>" : "") +
               "</td>" +
             "</tr>" +
             "<tr><td colspan='3' style='padding-top:8px;padding-bottom:12px;'>" +
@@ -1201,10 +1262,10 @@ async function buildOutlookCompatibleBody(subject) {
                   "</td>" +
                   "<td style='width:45%;vertical-align:top;'>" +
                     "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;'>" +
-                      "<tr><td style='font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 6px 2px 0;'>Hora de entrada:</td><td style='font-size:11px;padding:2px 0;'><span style='display:inline-block;min-width:190px;border:1px solid #bfbfbf;padding:3px 7px;'>" + escapeHtml(horaEntrada) + "</span></td></tr>" +
-                      "<tr><td style='font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 6px 2px 0;'>Hora de salida:</td><td style='font-size:11px;padding:2px 0;'><span style='display:inline-block;min-width:190px;border:1px solid #bfbfbf;padding:3px 7px;'>" + escapeHtml(horaSalida) + "</span></td></tr>" +
-                      "<tr><td style='font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 6px 2px 0;'>Ingeniero saliente:</td><td style='font-size:11px;padding:2px 0;'><span style='display:inline-block;min-width:190px;border:1px solid #bfbfbf;padding:3px 7px;'>" + escapeHtml(saliente) + "</span></td></tr>" +
-                      "<tr><td style='font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 6px 2px 0;'>Ingeniero entrante:</td><td style='font-size:11px;padding:2px 0;'><span style='display:inline-block;min-width:190px;border:1px solid #bfbfbf;padding:3px 7px;'>" + escapeHtml(entrante) + "</span></td></tr>" +
+                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Hora de entrada:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:1px solid #bfbfbf;padding:4px 8px;'>" + escapeHtml(horaEntrada) + "</span></td></tr>" +
+                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Hora de salida:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:1px solid #bfbfbf;padding:4px 8px;'>" + escapeHtml(horaSalida) + "</span></td></tr>" +
+                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Ingeniero saliente:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:1px solid #bfbfbf;padding:4px 8px;'>" + escapeHtml(saliente) + "</span></td></tr>" +
+                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Ingeniero entrante:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:1px solid #bfbfbf;padding:4px 8px;'>" + escapeHtml(entrante) + "</span></td></tr>" +
                     "</table>" +
                   "</td>" +
                 "</tr>" +
@@ -1422,6 +1483,7 @@ function startApp() {
   clearSectionsOnLoad();
   enableEditableEstadoActual();
   enableEditableProcesoMainFields();
+  enableEditableDesestimadosCounters();
   updateProcesoLevelCounters();
   watchProcesoTableCounters();
   updateFinalizadosLevelCounters();
