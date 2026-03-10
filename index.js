@@ -490,7 +490,7 @@ function mapExcelRowsToIncidents(rows) {
     }
     if (sintoma) incident.details.push({ label: "Síntoma", text: sintoma });
     if (bucket === "proceso") {
-      incident.details.push({ label: "Estado actual", text: estadoActual || "Pendiente de actualización." });
+      incident.details.push({ label: "Estado actual", text: estadoActual || "Incidente viene siendo revisado por los soportes correspondientes." });
     } else {
       if (causa) incident.details.push({ label: "Causa", text: causa });
       if (solucion) incident.details.push({ label: "Solución", text: solucion });
