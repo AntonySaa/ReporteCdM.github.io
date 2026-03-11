@@ -637,6 +637,26 @@ function renderFinalOrDesestimadosSection(sectionSelector, tableClass, ariaLabel
   });
 }
 
+function sortIncidentsByNivel(items) {
+  if (!Array.isArray(items) || items.length === 0) return items || [];
+  const withIndex = items.map(function (item, index) {
+    return { item: item, index: index };
+  });
+  const priority = function (nivel) {
+    const value = String(nivel || "").toUpperCase().trim();
+    if (value === "N1") return 0;
+    if (value === "N0") return 1;
+    return 2;
+  };
+  withIndex.sort(function (a, b) {
+    const pa = priority(a.item.nivel);
+    const pb = priority(b.item.nivel);
+    if (pa !== pb) return pa - pb;
+    return a.index - b.index;
+  });
+  return withIndex.map(function (entry) { return entry.item; });
+}
+
 async function syncFromExcelFile(file) {
   if (!file) return;
   if (!window.XLSX) {
@@ -649,6 +669,8 @@ async function syncFromExcelFile(file) {
   const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = window.XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
   const data = mapExcelRowsToIncidents(rows);
+  data.proceso = sortIncidentsByNivel(data.proceso);
+  data.finalizados = sortIncidentsByNivel(data.finalizados);
 
   renderProcesoSection(data.proceso);
   renderFinalOrDesestimadosSection(
