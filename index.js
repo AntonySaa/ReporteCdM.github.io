@@ -322,6 +322,29 @@ function enableEditableProcesoMainFields() {
   });
 }
 
+function enableEditableDesestimadoNivelCells() {
+  const styleId = "editable-desestimado-nivel-style";
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.textContent =
+      ".editable-desestimado-nivel{background:#fff;border:1px solid #b9b9b9;padding:6px 8px;min-height:28px;outline:none;}" +
+      ".editable-desestimado-nivel:focus{border-color:#b57edc;box-shadow:0 0 0 1px #b57edc inset;}";
+    document.head.appendChild(style);
+  }
+
+  const rows = document.querySelectorAll("section.morado table.tabla-desestimados-incidente tbody tr:not(.detail-row)");
+  rows.forEach(function (row) {
+    const nivelCell = row.querySelector("td:nth-child(4)");
+    if (!nivelCell) return;
+    if (nivelCell.textContent.trim().toLowerCase() !== "desestimado") return;
+    nivelCell.contentEditable = "true";
+    nivelCell.spellcheck = false;
+    nivelCell.classList.add("editable-desestimado-nivel");
+    nivelCell.setAttribute("title", "Campo editable manualmente");
+  });
+}
+
 function disconnectObservers(list) {
   list.forEach(function (obs) { obs.disconnect(); });
   return [];
@@ -863,6 +886,7 @@ function refreshReportNow() {
   refreshNow();
   enableEditableEstadoActual();
   enableEditableProcesoMainFields();
+  enableEditableDesestimadoNivelCells();
   enableEditableDesestimadosCounters();
   updateProcesoLevelCounters();
   updateFinalizadosLevelCounters();
@@ -1505,6 +1529,7 @@ function startApp() {
   clearSectionsOnLoad();
   enableEditableEstadoActual();
   enableEditableProcesoMainFields();
+  enableEditableDesestimadoNivelCells();
   enableEditableDesestimadosCounters();
   updateProcesoLevelCounters();
   watchProcesoTableCounters();
