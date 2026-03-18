@@ -1480,6 +1480,9 @@ async function openMailClientFromModal() {
 }
 
 async function sendReportDirectly() {
+  if (!window.confirm("¿Estás seguro de enviar el reporte por correo?")) {
+    return;
+  }
   const toList = splitEmails(DEFAULT_TO_EMAIL);
   const ccList = splitEmails(DEFAULT_CC_EMAILS);
 
