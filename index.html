@@ -14,6 +14,7 @@
       --borde:#bfbfbf;
       --gris:#dedede;
       --texto:#000000;
+      --control-width:280px;
     }
 
     *{ box-sizing:border-box; }
@@ -348,34 +349,37 @@
     }
     .summary-right .row{
       display:grid;
-      grid-template-columns:1fr auto;
+      grid-template-columns:1fr var(--control-width);
       gap:12px;
       margin:3px 0;
       font-size:clamp(13px, .84vw, 22px);
       text-transform:uppercase;
       color:#000;
+      align-items:center;
     }
     .summary-right .label{
       font-weight:700;
     }
     .engineer-select{
-      min-width:210px;
+      width:100%;
+      min-width:0;
       border:1px solid var(--borde);
       background:#fff;
       color:#000;
       font:inherit;
       text-transform:uppercase;
-      padding:2px 6px;
-      height:24px;
+      padding:4px 8px;
+      height:34px;
     }
     .hora-input{
-      min-width:210px;
+      width:100%;
+      min-width:0;
       border:1px solid var(--borde);
       background:#fff;
       color:#000;
       font:inherit;
-      padding:2px 6px;
-      height:24px;
+      padding:4px 8px;
+      height:34px;
     }
 
     table{
