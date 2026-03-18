@@ -67,6 +67,8 @@ const countDesestimadosN1 = document.getElementById("count-desestimados-n1");
 const countDesestimadosN0 = document.getElementById("count-desestimados-n0");
 const LOGO_KYNDRYL_EMAIL_URL = "https://antonysaa.github.io/ReporteCdM.github.io/kyndryl-logo.png";
 const LOGO_BCP_EMAIL_URL = "https://antonysaa.github.io/ReporteCdM.github.io/aa.png";
+const DEFAULT_TO_EMAIL = "antonysaavedra@bcp.com.pe";
+const DEFAULT_CC_EMAILS = "";
 const AUTH_USERNAME = "reportecdm";
 const AUTH_PASSWORD = "reportecdm2026@";
 const AUTH_SESSION_KEY = "reporte_cdm_auth_ok";
@@ -896,10 +898,7 @@ function refreshReportNow() {
 }
 
 function openMailModal() {
-  if (!mailModal) return;
-  mailModal.classList.add("show");
-  mailModal.setAttribute("aria-hidden", "false");
-  if (mailPara) mailPara.focus();
+  sendReportDirectly();
 }
 
 function closeMailModal() {
@@ -1480,6 +1479,27 @@ async function openMailClientFromModal() {
   }
 }
 
+async function sendReportDirectly() {
+  const toList = splitEmails(DEFAULT_TO_EMAIL);
+  const ccList = splitEmails(DEFAULT_CC_EMAILS);
+
+  const subject =
+    "[Reporte de Gestión de Incidente - Monitoring]" +
+    "[" + getCurrentTurnoLabel() + "]" +
+    "[" + getCurrentShiftPhrase() + "]" +
+    "[" + formatDate(new Date()) + "]";
+
+  const htmlBody = await buildOutlookCompatibleBody(subject);
+  try {
+    await sendReportWithPowerAutomate(toList, ccList, subject, htmlBody);
+    alert("Reporte enviado correctamente por Power Automate.");
+  } catch (error) {
+    console.error(error);
+    downloadHtmlFile(subject + "_correo", htmlBody);
+    alert("No se pudo enviar por Power Automate. Se generó el HTML como respaldo.");
+  }
+}
+
 if (authForm) {
   authForm.addEventListener("submit", handleAuthSubmit);
 }
@@ -1487,7 +1507,7 @@ if (btnLogout) {
   btnLogout.addEventListener("click", handleLogout);
 }
 if (btnAbrirEnviar) {
-  btnAbrirEnviar.addEventListener("click", openMailModal);
+  btnAbrirEnviar.addEventListener("click", sendReportDirectly);
 }
 if (btnActualizarReporte) {
   btnActualizarReporte.addEventListener("click", function () {
