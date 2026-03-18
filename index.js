@@ -70,6 +70,7 @@ const LOGO_BCP_EMAIL_URL = "https://antonysaa.github.io/ReporteCdM.github.io/aa.
 const AUTH_USERNAME = "reportecdm";
 const AUTH_PASSWORD = "reportecdm2026@";
 const AUTH_SESSION_KEY = "reporte_cdm_auth_ok";
+const TURN_GRACE_MINUTES = 10;
 let turnoSeleccionado = null;
 let horaInicioManual = false;
 let horaCierreManual = false;
@@ -186,8 +187,10 @@ function refreshNow() {
   if (dateTag) dateTag.textContent = "[" + formatDate(now) + "]";
 
   if (!turnoSeleccionado) {
-    const hour = now.getHours();
-    turnoSeleccionado = hour >= 18 || hour < 6 ? "noche" : "manana";
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const startMorning = 6 * 60 + TURN_GRACE_MINUTES;
+    const startNight = 18 * 60 + TURN_GRACE_MINUTES;
+    turnoSeleccionado = minutes >= startNight || minutes < startMorning ? "noche" : "manana";
   }
   applyShift(turnoSeleccionado, now);
 }
