@@ -1307,10 +1307,10 @@ async function buildOutlookCompatibleBody(subject) {
                   "</td>" +
                   "<td style='width:45%;vertical-align:top;'>" +
                     "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='border-collapse:collapse;'>" +
-                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Hora de entrada:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:1px solid #bfbfbf;padding:4px 8px;'>" + escapeHtml(horaEntrada) + "</span></td></tr>" +
-                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Hora de salida:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:1px solid #bfbfbf;padding:4px 8px;'>" + escapeHtml(horaSalida) + "</span></td></tr>" +
-                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Ingeniero saliente:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:1px solid #bfbfbf;padding:4px 8px;'>" + escapeHtml(saliente) + "</span></td></tr>" +
-                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Ingeniero entrante:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:1px solid #bfbfbf;padding:4px 8px;'>" + escapeHtml(entrante) + "</span></td></tr>" +
+                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Hora de entrada:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:0;padding:2px 0;'>" + escapeHtml(horaEntrada) + "</span></td></tr>" +
+                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Hora de salida:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:0;padding:2px 0;'>" + escapeHtml(horaSalida) + "</span></td></tr>" +
+                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Ingeniero saliente:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:0;padding:2px 0;'>" + escapeHtml(saliente) + "</span></td></tr>" +
+                      "<tr><td style='font-size:14px;font-weight:700;text-transform:uppercase;padding:2px 8px 2px 0;'>Ingeniero entrante:</td><td style='font-size:14px;padding:2px 0;'><span style='display:inline-block;min-width:220px;border:0;padding:2px 0;'>" + escapeHtml(entrante) + "</span></td></tr>" +
                     "</table>" +
                   "</td>" +
                 "</tr>" +
