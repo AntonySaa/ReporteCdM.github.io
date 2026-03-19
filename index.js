@@ -72,6 +72,8 @@ const DEFAULT_CC_EMAILS = "";
 const AUTH_USERNAME = "reportecdm";
 const AUTH_PASSWORD = "reportecdm2026@";
 const AUTH_SESSION_KEY = "reporte_cdm_auth_ok";
+const AUTH_SESSION_TS_KEY = "reporte_cdm_auth_ts";
+const AUTH_SESSION_TTL_MS = 60 * 60 * 1000;
 const TURN_GRACE_MINUTES = 20;
 let turnoSeleccionado = null;
 let horaInicioManual = false;
@@ -82,6 +84,7 @@ let finalizadosObservers = [];
 let desestimadosObservers = [];
 const POWER_AUTOMATE_WEBHOOK_URL = "https://defaultf260df36bc43424c8f44c85226657b.01.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/01a55d87cf454c38af44551c2f7d8c25/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PX2KyATU7XgRkab_AaNEivvqpcTVaQ29hdwyM6IA_dA";
 let appBooted = false;
+let authExpiryTimer = null;
 
 fillEngineers(ingenieroSaliente, " - ");
 fillEngineers(ingenieroEntrante, " - ");
@@ -109,14 +112,41 @@ function showAuth() {
 
 function markAuthenticated() {
   localStorage.setItem(AUTH_SESSION_KEY, "1");
+  localStorage.setItem(AUTH_SESSION_TS_KEY, String(Date.now()));
 }
 
 function clearAuthentication() {
   localStorage.removeItem(AUTH_SESSION_KEY);
+  localStorage.removeItem(AUTH_SESSION_TS_KEY);
 }
 
 function isAuthenticated() {
-  return localStorage.getItem(AUTH_SESSION_KEY) === "1";
+  if (localStorage.getItem(AUTH_SESSION_KEY) !== "1") return false;
+  const ts = Number(localStorage.getItem(AUTH_SESSION_TS_KEY) || 0);
+  if (!ts) return false;
+  const elapsed = Date.now() - ts;
+  if (elapsed > AUTH_SESSION_TTL_MS) {
+    clearAuthentication();
+    return false;
+  }
+  return true;
+}
+
+function scheduleSessionExpiry() {
+  if (authExpiryTimer) {
+    clearTimeout(authExpiryTimer);
+    authExpiryTimer = null;
+  }
+  const ts = Number(localStorage.getItem(AUTH_SESSION_TS_KEY) || 0);
+  if (!ts) return;
+  const remaining = AUTH_SESSION_TTL_MS - (Date.now() - ts);
+  if (remaining <= 0) {
+    handleLogout();
+    return;
+  }
+  authExpiryTimer = setTimeout(function () {
+    handleLogout();
+  }, remaining);
 }
 
 function handleAuthSubmit(event) {
@@ -139,6 +169,10 @@ function handleAuthSubmit(event) {
 }
 
 function handleLogout() {
+  if (authExpiryTimer) {
+    clearTimeout(authExpiryTimer);
+    authExpiryTimer = null;
+  }
   clearAuthentication();
   closeMailModal();
   showAuth();
@@ -1551,6 +1585,7 @@ if (excelFileInput) {
 function startApp() {
   if (appBooted) return;
   appBooted = true;
+  scheduleSessionExpiry();
   clearSectionsOnLoad();
   enableEditableEstadoActual();
   enableEditableProcesoMainFields();
